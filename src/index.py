@@ -54,11 +54,13 @@ class Chunk(BaseModel):
 
 # === Read corpus ===
 
-def list_corpus_files():
+def list_corpus_files() -> list[Path]:
+    """Gies through raw_dir recursively and return a list of files to index"""
     pass
 
 
 def read_file(path: Path) -> str | None:
+    """Read a file, return None if not readable (e.g. binary)"""
     pass
 
 
@@ -77,22 +79,22 @@ def chunk_markdown(text: str, file_path: str, max_chunk_size: int) -> list[Chunk
 # === Tokenization ===
 
 def tokenize(texts: list[str]) -> ...:
-    """Transform texts into tokens for BM25"""
+    """Transform texts into tokens for BM25, also used in retrieval.py"""
     pass
 
 
 # === Construct ===
 
-def build_index():
+def build_index(raw_dir: str, output_dir: str, max_chunk_size: int = K) -> None:
     """files -> chunks (tqdm) -> tokens -> BM25 -> save"""
     pass
 
 
-def save_index():
+def save_index(retriever, chunks: list[Chunk], output_dir: str) -> None:
     """Save BM25 index and chunks metadatas (json) in data/processed/"""
     pass
 
 
-def load_index():
+def load_index(output_dir: str) -> tuple[object, list[Chunk]]:
     """Reload index + chunks. Used by retrieval.py"""
     pass
