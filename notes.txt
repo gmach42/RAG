@@ -6,3 +6,51 @@ Augmenting: filter those snippets and place them in the model's context window.
 Generating: read that context and produce the answer.
 
 each stage feeds the next.
+
+Data models must use pydantic (structures exchanged between stages such as those in the Data Models section)
+Service or orchestration classes (indexer, retriever, pipeline) do not have to be pydantic.
+
+Your system must expose a Command-Line Interface (CLI) built with python fire and progress bars (tqdm) for long-running operations.
+
+model: Qwen/Qwn3-0.6B
+
+Obj:
+	Build a Retrieval-Augmented Generation system that answers questions about a codebase.
+	Ingest the provided vLLM repo into a searchable index, retrieve the most relevan snippets for a question, generate an answer from them with Qwen and measure retrieval quality with recall@k?
+	The system is judge on whether it retrieves the right source locations and produces answers grounded in those sources.
+
+Indexing:
+	Read the files judged useful from the vLLM repo, split each one into chunks and persist an index that retrieval can query in ms.
+	Index the whole corpus must take **at most 5 minutes**.
+	2 distinct chunking strategies:
+		1. Python code chunking,
+		2. Markdown / text chunking
+	For retrieval, implemet at least one of the two classic lexical methods:
+		1. TF-IDF,
+		2. BM25
+
+Chunk size is configurable through a CLI arg (--max_chunk_size). Default is 2000 characters, do not go above it.
+
+Retrieval:
+	Index built -> you can search it. Given a question, your system returns the top-k most relevant snippets.
+	Each result is a source location: a file_path and the character range (first_character_index, last_character_index) it covers, at most 2000 characters wide.
+	CAUTION: file_path must match the corpus path exactly (e.g.data/raw/vllm-0.10.1/docs/features/lora.md)
+	Retrieval must work for a single query and in batch over a whole dataset of questions read from JSON.
+	On the reference datasets, you must reach at least 80% reacall@5 on docs questions and 50% on code questions.
+
+Answer Generation:
+	With the right snippets retreved, the system generates a natural-language answer to the question using Qwen.
+	Pass the retreved context to the model within its token budget and produce JSON.
+	A satisfactory answer is:
+		Coherent and understandable,
+		Grounded in the retrieved sources, with no major hallucinations.
+		On point: it answer the question
+
+Data Models:
+	Implement the following pydantic models:
+		MinimalSource Model: represents a single source of information.
+		The UnansweredQuestion and Answered Question models: represent an unanswered and answered question, respectively.
+		RagDataset Model: represents a dataset of RAG questions.
+		MinimalSearchResult and MinimalAnswer models: represent a search result and an answer.
+		StudentSearchResults and StudentSearchResultsAndAnswer
+
