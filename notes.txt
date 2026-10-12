@@ -54,3 +54,113 @@ Data Models:
 		MinimalSearchResult and MinimalAnswer models: represent a search result and an answer.
 		StudentSearchResults and StudentSearchResultsAndAnswer
 
+Output:
+	Each command writes a JSON file that conforms to the provided pydantic models:
+	• For search operations: Use StudentSearchResults model with:
+		◦ search_results: List of MinimalSearchResults containing question_id, ques-
+		tion and retrieved_sources
+		◦ k: Number of results requested
+	• For answer generation: Use StudentSearchResultsAndAnswer model with:
+		◦ search_results: List of MinimalAnswer containing question_id, question,
+		retrieved_sources, and answer
+		◦ k: Number of results requested
+	• Source information: Each MinimalSource contains:
+		◦ file_path: path to the source file, relative to your project root and writ-
+		ten exactly as in the ingested corpus (e.g. data/raw/vllm-0.10.1/...); it is
+		compared verbatim to the reference
+		◦ first_character_index: Starting character position
+		◦ last_character_index: Ending character position
+
+Command-Line Interface:
+	CLI built with Python Fire. Every command is invoked as uv run python -m src <command> [options].
+	Required commands:
+		- index -max_chunk_size <int> # Ingest data/raw/ and build the index under data/processed/
+		- search <query> -k <int> # Return the top-k sources for a single query
+		- search_dataset -dataset_path <path> -k <int> -save_directory <dir> # Run search over a whole dataset and write a StudentSearchResults JSON file.
+		- answer <query> -k <int> # Answer a single query using the retrieved context
+		- answer_dataset -student_search_results_path <path> -save_directory <dir> # Generate answers for a dataset, producing StudentSearchResultsAndAnswer JSON file.
+		- evaluate -student_search_results_path <path> - dataset_path <path> # Report your own recall@k against a ground-truth dataset for your own testing.
+
+	Input and output paths must be configurable CLI args.
+	Include progress bars (tqdm) for long-running operations and handle degenerate inputs (empty query, nonsensical query, k=0, missing files, malformed JSON) gracefully.
+	Your solution must never import or call the moulinette.
+
+Expected project layout for evaluation:
+	During the defense, the retrieval pipeline is run end-to-end as a single automated flow:
+	index -> search_dataset -> moulinette evaluate_student_search_results
+	your repo must repect the following layout:
+		- src/
+		- pyproject.toml
+		- README.md
+		- data/raw/
+		- data/processed/
+		- data/datasets/UnansweredQuestions/ and data/datasets/AnsweredQuestions/
+		- data/output/search_results/<DatasetScope>/
+		- data/output/search_results_and_answer/<DatasetScope>/
+
+	All input and output paths (--dataset_path, --save_directory, --student_search_results_path)
+	must be configurable CLI arguments and must never be hard-coded.
+
+Running the full pipeline:
+	1. Index the corpus once:
+		```
+		uv run python -m src index --max_chunk_size 2000
+		Ingestion complete! Indices saved under data/processed/
+		```
+	2. Search the dataset. Always scope --save_directory by dataset (UnansweredQuestions
+	or AnsweredQuestions): the public datasets share file names, so writing every run into
+	the same folder would overwrite previous results.
+		```
+		uv run python -m src search_dataset
+		--dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json
+		--k 10
+		--save_directory data/output/search_results/UnansweredQuestions
+		Saved student_search_results to data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+		```
+	3. Score with the moulinette (rename moulinette-ubuntu/-fedora to moulinette
+	first). The student results come first, the ground-truth AnsweredQuestions dataset
+	second:
+		```
+		./moulinette evaluate_student_search_results
+		data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+		data/datasets/AnsweredQuestions/dataset_docs_public.json
+		--k 10 --max_context_length 2000
+		Student data is valid: True
+		Evaluation Results
+		========================================
+		Recall@1: 0.450 Recall@3: 0.590 Recall@5: 0.650 Recall@10: 0.720
+		```
+	4. Generate answers from the search results:
+		```
+		uv run python -m src answer_dataset
+		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+		--save_directory data/output/search_results_and_answer/UnansweredQuestions
+		Loaded 100 questions ... Processed 100 of 100 questions
+		Saved student_search_results_and_answer to .../UnansweredQuestions/dataset_docs_public.json
+		```
+
+
+Bonus:
+	1. Semantic embeddings: use a vector index built with a lightweight CPU model model (eg all-MiniLM-L6-v2)
+	2. Hybrid retrieval: combine lexical and semantic into a single result list
+	3. Incremental indexing: when a file changes re-index only that file instead of rebuilding the whole index.
+	4. Caching: cache the index and query results to speed up cold start and repeated queries.
+	5. Local HTTP API: expose querying the index and answering questions over a small local http api, so the system can be driven by something other than the CLI.
+
+
+TLDR:
+
+Indexation:
+	- indexer les fichiers présents dans la vllm (avec une limite max de 2000 charactères) à l'aide de BN25 ou TF-IDF.
+	- l'indexation s'effectue par chunk et une indexation "bête" est préférée dû à comment est codé la moulinette.
+	- majoritairement 2 types de fichiers a parse -> indexer les fichiers md et py (mais txt sympa aussi)
+
+Retrieval:
+	- Une fois la source indexée (il faut vérifier que la source est bien indexée avant de retrieve, le cas échéant re-indexer), on peut effectuer la recherche sur l'index.
+	- On recherche les chunks qui répondent le mieux à la query -> Basiquement c'est un CTRL-F sur l'index.
+
+Answering:
+	- Il s'agit ici de recréer ce que l'on a fait durant Call_me_maybe mais avec l'aide d'une librairie comme Olama, torch, trandformers... Afin de faciliter la tache
+	- On utilise les chunks récupérés lors de la phase de retrieval pour générer les réponses aux questions posées.
+	- Il est conseillé de désactiver l'aléatoire de Qwen
+	- Faire en sorte que Qwen n'hallucine pas en se basant uniquement sur les chunks récupérés.

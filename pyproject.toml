@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["pydantic>=2.12.2"]
+dependencies = [
+    "bm25s>=0.3.13",
+    "fire>=0.7.1",
+    "pydantic>=2.12.2",
+]
 
 [dependency-groups]
 dev = [
