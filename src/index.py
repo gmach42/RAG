@@ -66,7 +66,7 @@ def section_starts(text: str) -> list[int]:
     """Return the starting indices of all sections in the text
 
     The first section always starts at 0 (text before the first header).
-    Ignores headers inside code blocks marked by ``` or ~~~.
+    Ignores headers inside code blocks marked by ```.
     """
     starts = [0]
     pos = 0
@@ -152,7 +152,14 @@ def tokenize(texts: list[str],
 def build_index(raw_dir: str,
                 output_dir: str,
                 max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> None:
-    """files -> chunks (tqdm) -> tokens -> BM25 -> save"""
+    """Main function to build the BM25 index from raw text files.
+
+    Stages:
+    1. Chunk raw text files into sections.
+    2. Tokenize the chunks.
+    3. Build the BM25 index.
+    4. Save the index and chunk metadata.
+    """
     chunks: list[MinimalSource] = []
     for file in tqdm(list_corpus_files(raw_dir), desc="Chunking"):
         text = read_file(file)
