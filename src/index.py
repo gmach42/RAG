@@ -57,12 +57,9 @@ def chunk_fix_size(text: str,
     return chunks
 
 
-HEADER_RE = re.compile(r"^#{1,6}(\s|$)")
-
-
 def is_header(line: str) -> bool:
-    """Check if a line is a markdown header (# to ###### then a space)"""
-    return HEADER_RE.match(line) is not None
+    """Check if a line is a markdown header"""
+    return line.lstrip().startswith("#")
 
 
 def section_starts(text: str) -> list[int]:
@@ -79,8 +76,8 @@ def section_starts(text: str) -> list[int]:
         if fence:
             if stripped.startswith(fence):
                 fence = ""
-        elif stripped.startswith(("```", "~~~")):
-            fence = stripped[:3]
+        elif stripped.startswith("```"):
+            fence = "```"
         elif pos > 0 and is_header(line):
             starts.append(pos)
         pos += len(line)
@@ -121,8 +118,7 @@ def section_to_chunks(text: str, file_path: str, start: int, end: int,
 def chunk_sections(
         text: str,
         file_path: str,
-        max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE
-) -> list[MinimalSource]:
+        max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> list[MinimalSource]:
     """Chunk a .md/.txt file according to titles (# ##)"""
     sections = merge_small_sections(section_starts(text), len(text),
                                     max_chunk_size)
@@ -171,6 +167,7 @@ def build_index(raw_dir: str,
 
 
 # === Save and Load Index ===
+
 
 def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
                output_dir: str) -> None:
