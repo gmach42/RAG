@@ -51,8 +51,6 @@ from .data_models import Chunk
 CORPUS_SUFFIXES = {".md", ".txt", ".py"}
 CHUNKS_FILENAME = "chunks.json"
 
-Range = tuple[int, int]
-
 
 def list_corpus_files(raw_dir: str) -> list[Path]:
     """Goes through raw_dir recursively and return a list of files to index"""
@@ -127,9 +125,9 @@ def section_starts(text: str) -> list[int]:
 
 
 def merge_small_sections(starts: list[int], text_length: int,
-                         max_chunk_size: int) -> list[Range]:
+                         max_chunk_size: int) -> list[tuple[int, int]]:
     """Merge consecutive sections while the result is <= max_chunk_size"""
-    merged: list[Range] = []
+    merged: list[tuple[int, int]] = []
     ends = starts[1:] + [text_length]
     for start, end in zip(starts, ends):
         if merged:
