@@ -2,7 +2,6 @@
 
 # Description
 # Instructions
-# Resources
 # System architecture
 # Chunking strategy
 # Retrieval method
@@ -10,3 +9,5 @@
 # Design decisions
 # Challenges faced
 # Example usage
+# Resources
+	https://blog.stephane-robert.info/docs/developper/programmation/python/rag-chunking/
