@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import BaseModel, Field, model_validator
 import uuid
 from typing import Self
 
@@ -40,7 +40,7 @@ class AnsweredQuestion(UnansweredQuestion):
 
 
 class RagDataset(BaseModel):
-    """Representation of a RAG dataset containing both answered and unanswered questions."""
+    """Representation of a RAG dataset."""
     rag_questions: list[AnsweredQuestion | UnansweredQuestion]
 
 
@@ -52,7 +52,7 @@ class MinimalSearchResults(BaseModel):
 
 
 class MinimalAnswer(MinimalSearchResults):
-    """Minimal representation of an answer to a question, including search results."""
+    """Minimal representation of an answer to a question"""
     answer: str
 
 
@@ -63,6 +63,6 @@ class StudentSearchResults(BaseModel):
 
 
 class StudentSearchResultsAndAnswer(BaseModel):
-    """Representation of a student's search results and answer for a question."""
+    """Representation of a student's search results and answer"""
     search_results: list[MinimalAnswer]
     k: int

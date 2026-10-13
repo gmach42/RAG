@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import re
 import bm25s
 from bm25s.tokenization import Tokenized
 
