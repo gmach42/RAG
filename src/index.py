@@ -1,50 +1,13 @@
+import json
 from pathlib import Path
 
 import re
 import bm25s
 from bm25s.tokenization import Tokenized
 
-from pydantic import TypeAdapter
-
 from tqdm import tqdm
 
-from .data_models import Chunk
-
-# Create corpus
-# corpus = [
-#     "a cat is a feline and likes to purr",
-#     "a dog is the human's best friend and loves to play",
-#     "a bird is a beautiful animal that can fly",
-#     "a fish is a creature that lives in water and swims",
-# ]
-
-# # Tokenize the corpus
-# corpus_tokens = bm25s.tokenize(corpus)
-
-# # Index the corpus
-# retriever = bm25s.BM25(corpus=corpus)
-# retriever.index(corpus_tokens)
-
-# # Query the corpus
-# query = "What is an llm?"
-# query_tokens = bm25s.tokenize([query])
-
-# # Get top-k results as a tuple of (doc ids, scores)
-# results, scores = retriever.retrieve(query_tokens, k=4)
-
-# for i in range(results.shape[1]):
-#     doc, score = results[0, i], scores[0, i]
-#     print(f"Rank {i+1} (score: {score:.2f}): {doc}")
-
-# # You can save the arrays to a directory...
-# retriever.save("vllm_index_bm25")
-
-# # You can save the corpus along with the model
-# retriever.save("vllm_index_bm25", corpus=corpus)
-
-# # ...and load them when you need them
-# reloaded_retriever = bm25s.BM25.load("vllm_index_bm25", load_corpus=True)
-# # set load_corpus=False if you don't need the corpus
+from .data_models import MinimalSource
 
 # === Read corpus ===
 
@@ -74,21 +37,21 @@ DEFAULT_MAX_CHUNK_SIZE: int = 2000
 def chunk_fix_size(text: str,
                    file_path: str,
                    max_chunk_size: int,
-                   offset: int = 0) -> list[Chunk]:
+                   offset: int = 0) -> list[MinimalSource]:
     """Chunk text following only the max_chunk_size parameter
 
     offset is the position of text in the original file, so that the
     chunk indices stay absolute.
     """
-    chunks: list[Chunk] = []
+    chunks: list[MinimalSource] = []
     pos = 0
     size = len(text)
     while pos < size:
         end = min(pos + max_chunk_size, size)
-        cur_chunk = Chunk(file_path=file_path,
-                          first_character_index=offset + pos,
-                          last_character_index=offset + end,
-                          text=text[pos:end])
+        cur_chunk = MinimalSource(file_path=file_path,
+                                  first_character_index=offset + pos,
+                                  last_character_index=offset + end,
+                                  text=text[pos:end])
         chunks.append(cur_chunk)
         pos = end
     return chunks
@@ -140,7 +103,7 @@ def merge_small_sections(starts: list[int], text_length: int,
 
 
 def section_to_chunks(text: str, file_path: str, start: int, end: int,
-                      max_chunk_size: int) -> list[Chunk]:
+                      max_chunk_size: int) -> list[MinimalSource]:
     """Convert a section of text defined by start and end into chunks"""
     section = text[start:end]
     if not section.strip():
@@ -148,28 +111,30 @@ def section_to_chunks(text: str, file_path: str, start: int, end: int,
     if end - start > max_chunk_size:
         return chunk_fix_size(section, file_path, max_chunk_size, offset=start)
     return [
-        Chunk(file_path=file_path,
-              first_character_index=start,
-              last_character_index=end,
-              text=section)
+        MinimalSource(file_path=file_path,
+                      first_character_index=start,
+                      last_character_index=end,
+                      text=section)
     ]
 
 
 def chunk_sections(
         text: str,
         file_path: str,
-        max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> list[Chunk]:
+        max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE
+) -> list[MinimalSource]:
     """Chunk a .md/.txt file according to titles (# ##)"""
     sections = merge_small_sections(section_starts(text), len(text),
                                     max_chunk_size)
-    chunks: list[Chunk] = []
+    chunks: list[MinimalSource] = []
     for start, end in sections:
         chunks.extend(
             section_to_chunks(text, file_path, start, end, max_chunk_size))
     return chunks
 
 
-def chunk_file(path: Path, text: str, max_chunk_size: int) -> list[Chunk]:
+def chunk_file(path: Path, text: str,
+               max_chunk_size: int) -> list[MinimalSource]:
     """Pick the chunking strategy according to the file extension"""
     if path.suffix == ".py":
         return chunk_fix_size(text, str(path), max_chunk_size)
@@ -192,7 +157,7 @@ def build_index(raw_dir: str,
                 output_dir: str,
                 max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> None:
     """files -> chunks (tqdm) -> tokens -> BM25 -> save"""
-    chunks: list[Chunk] = []
+    chunks: list[MinimalSource] = []
     for file in tqdm(list_corpus_files(raw_dir), desc="Chunking"):
         text = read_file(file)
         if text is None:
@@ -205,23 +170,24 @@ def build_index(raw_dir: str,
     save_index(retriever, chunks, output_dir)
 
 
-CHUNKS_ADAPTER = TypeAdapter(list[Chunk])
+# === Save and Load Index ===
 
-
-def save_index(retriever: bm25s.BM25, chunks: list[Chunk],
+def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
                output_dir: str) -> None:
     """Save BM25 index and chunks metadatas (json) in output_dir"""
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     retriever.save(str(out))
-    (out / CHUNKS_FILENAME).write_bytes(CHUNKS_ADAPTER.dump_json(chunks))
+    data = [chunk.model_dump() for chunk in chunks]
+    (out / CHUNKS_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
 
-def load_index(output_dir: str) -> tuple[bm25s.BM25, list[Chunk]]:
+def load_index(output_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
     """Reload index + chunks. Used by retrieval.py
 
     The i-th document of the BM25 index is chunks[i].
     """
     retriever = bm25s.BM25.load(output_dir)
-    raw = (Path(output_dir) / CHUNKS_FILENAME).read_bytes()
-    return retriever, CHUNKS_ADAPTER.validate_json(raw)
+    raw = (Path(output_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
+    chunks = [MinimalSource(**data) for data in json.loads(raw)]
+    return retriever, chunks

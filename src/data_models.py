@@ -4,29 +4,26 @@ from typing import Self
 
 
 class MinimalSource(BaseModel):
-    """Minimal representation of a source document."""
+    """Minimal representation of a source document.
+
+    text is optional: it is filled by the indexer, but the sources of the
+    reference datasets do not have it.
+    """
     file_path: str
     first_character_index: int
     last_character_index: int
-
-
-class Chunk(MinimalSource):
-    """A basic chunk pydantic model heriting from minimal source"""
-    text: str
-    title: str | None = None
+    text: str = ""
 
     @model_validator(mode="after")
     def check_range(self) -> Self:
         first = self.first_character_index
         last = self.last_character_index
-        text = self.text
         if not first <= last:
             raise ValueError(
-                f"The first index is superior to the last in Chunk {self!r}")
-        if not last - first == len(text):
+                f"The first index is superior to the last in {self!r}")
+        if self.text and last - first != len(self.text):
             raise ValueError(
-                f"The length of the text does not correspond in {self!r}, "
-                f"an error may occur")
+                f"The length of the text does not correspond in {self!r}")
         return self
 
 
