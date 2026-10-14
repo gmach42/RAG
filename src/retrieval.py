@@ -13,30 +13,27 @@ from .data_models import (MinimalSource, UnansweredQuestion, Ragdataset,
 class Retriever:
 
     def __init__(self, index_dir: str) -> None:
+        """Load the BM25 index (index + chunks)"""
         if not Path(index_dir).is_dir():
             raise FileNotFoundError(
                 f"No index in {index_dir!r}, run the index command first.")
         self.bm25, self.chunks = load_index(index_dir)
 
-
-def is_indexed(source_dir: str) -> bool:
-    """Check if the index exists in the given output directory"""
-    try:
-        load_index(source_dir)
-        return True
-    except (FileNotFoundError, ValueError):
-        return False
-
-
-def get_chunks(source_dir: str, query: str, top_k: int) -> list[MinimalSource]:
-    """Retrieve the chunks that best respond to the query using the BM25 index"""
-    retriever, chunks = load_index(source_dir)
-    tokenized_query = tokenize([query])[0]
-    scores = retriever.retrieve(tokenized_query, k=top_k)
-    ranked_indices = sorted(range(len(scores)),
-                            key=lambda i: scores[i],
-                            reverse=True)
-    return [chunks[i] for i in ranked_indices]
+    def search(self, query: str, top_k: int) -> list[MinimalSource]:
+        k = min(top_k, len(self.chunks))
+        if k <= 0 or not query.strip():
+            return []
+        tokens = tokenize([query])
+        # Get the ids of the best chunks and their respective score according to bm25
+        chunk_ids, scores = self.bm25.retrieve(tokens,
+                                               k=k,
+                                               show_progress=False)
+        results = []
+        # Associate the ids and score with zip then return the best chunks in order
+        for i, score in zip(chunk_ids[0], scores[0]):
+            if score > 0:
+                results.append(self.chunk[i])
+        return results
 
 
 def get_best_chunk(source_dir: str, query: str,
@@ -96,20 +93,6 @@ def save_search_results(search_results: StudentSearchResults,
     output_path = os.path.join(output_dir, "student_search_results.json")
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(search_results.model_dump_json(indent=4))
-
-
-def check_error(source_dir: str, questions_file: str, output_dir: str,
-                top_k: int) -> None:
-    if not os.path.exists(questions_file):
-        raise ValueError(f"Questions file '{questions_file}' does not exist.")
-    if not os.path.exists(source_dir):
-        raise ValueError(f"Source directory '{source_dir}' does not exist.")
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-    if not is_indexed(source_dir):
-        raise ValueError(f"Source directory '{source_dir}' is not indexed.")
-    if top_k <= 0:
-        raise ValueError(f"top_k must be a positive integer, got {top_k}.")
 
 
 def retrieve_and_save_results(source_dir: str, questions_file: str, top_k: int,
