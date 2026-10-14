@@ -3,6 +3,9 @@
 # Description
 # Instructions
 # System architecture
+
+![RAG schema](RAG_schema.png)
+
 # Chunking strategy
 # Retrieval method
 # Performance analysis
