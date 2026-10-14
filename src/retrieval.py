@@ -75,12 +75,14 @@ def get_search_results(source_dir: str, questions: list[UnansweredQuestion],
 
 
 def save_search_results(search_results: StudentSearchResults,
-                        output_dir: str) -> None:
-    """Save the student search results to a JSON file in the specified output directory"""
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "student_search_results.json")
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(search_results.model_dump_json(indent=4))
+                        dataset_path: str, save_directory: str) -> Path:
+    """Save the results under save_directory, named after the dataset"""
+    out_dir = Path(save_directory)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / Path(dataset_path).name
+    out_path.write_text(search_results.model_dump_json(indent=4),
+                        encoding="utf-8")
+    return out_path
 
 
 def retrieve_and_save_results(source_dir: str, questions_file: str, top_k: int,
