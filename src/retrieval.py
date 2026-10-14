@@ -50,28 +50,17 @@ def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
     return list(dataset.rag_questions)
 
 
-def get_minimal_search_results(source_dir: str,
-                               questions: list[UnansweredQuestion],
-                               top_k: int) -> list[MinimalSearchResults]:
-    """Retrieve the top_k chunks for each question and return the minimal search results"""
-    minimal_search_results = []
-    for query in questions:
-        query.retrieved_chunks = get_top_chunks(source_dir,
-                                                query.question,
-                                                top_k=top_k)
-        minimal_search_results.append(
-            MinimalSearchResults(question_id=query.question_id,
-                                 question=query.question,
-                                 retrieved_sources=query.retrieved_chunks))
-    return minimal_search_results
-
-
-def get_search_results(source_dir: str, questions: list[UnansweredQuestion],
-                       top_k: int) -> StudentSearchResults:
-    return StudentSearchResults(
-        student_search_results=get_minimal_search_results(
-            source_dir, questions, top_k),
-        k=top_k)
+def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
+                     top_k: int) -> StudentSearchResults:
+    """Retrieve the top_k chunks for each question"""
+    results = [
+        MinimalSearchResults(question_id=q.question_id,
+                             question=q.question,
+                             retrieved_sources=retriever.search(
+                                 q.question, top_k))
+        for q in tqdm(questions, desc="Searching")
+    ]
+    return StudentSearchResults(search_results=results, k=top_k)
 
 
 def save_search_results(search_results: StudentSearchResults,
