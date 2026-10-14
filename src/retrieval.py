@@ -76,8 +76,12 @@ def save_search_results(search_results: StudentSearchResults,
 
 def retrieve_and_save_results(source_dir: str, questions_file: str, top_k: int,
                               output_dir: str) -> StudentSearchResults:
+    # TODO fix save_search_result
     check_error(source_dir, questions_file, output_dir, top_k)
     questions = load_questions(questions_file)
     search_results = get_search_results(source_dir, questions, top_k)
     save_search_results(search_results, output_dir)
     return search_results
+
+
+# TODO add a funciton to pipeline the file (search_dataset)
