@@ -1,6 +1,6 @@
-# Once the source (vllm) is indexed (verified it is the case), research the chunks (minimalSource) which respond the best to the query (prompt)
+# Once the source (vllm) is indexed (verified it is the case),
+# research the chunks (minimalSource) which respond the best to the query (prompt)
 
-from pathlib import Path
 from .index import load_index
 from .data_models import MinimalSource
 
