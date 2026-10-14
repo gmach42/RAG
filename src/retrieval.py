@@ -4,8 +4,19 @@ the chunks (minimalSource) which respond the best to the query (prompt)
 
 import json
 import os
+from pathlib import Path
 from .index import load_index, tokenize
-from .data_models import MinimalSource, UnansweredQuestion, MinimalSearchResults, StudentSearchResults
+from .data_models import (MinimalSource, UnansweredQuestion, Ragdataset,
+                          MinimalSearchResults, StudentSearchResults)
+
+
+class Retriever:
+
+    def __init__(self, index_dir: str) -> None:
+        if not Path(index_dir).is_dir():
+            raise FileNotFoundError(
+                f"No index in {index_dir!r}, run the index command first.")
+        self.bm25, self.chunks = load_index(index_dir)
 
 
 def is_indexed(source_dir: str) -> bool:
