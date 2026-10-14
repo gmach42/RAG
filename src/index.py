@@ -98,8 +98,8 @@ def merge_small_sections(starts: list[int], text_length: int,
     return merged
 
 
-def section_to_chunks(text: str, file_path: str, start: int, end: int,
-                      max_chunk_size: int) -> list[MinimalSource]:
+def text_to_minimalsource(text: str, file_path: str, start: int, end: int,
+                          max_chunk_size: int) -> list[MinimalSource]:
     """Convert a section of text defined by start and end into chunks"""
     section = text[start:end]
     if not section.strip():
@@ -124,7 +124,7 @@ def chunk_sections(
     chunks: list[MinimalSource] = []
     for start, end in sections:
         chunks.extend(
-            section_to_chunks(text, file_path, start, end, max_chunk_size))
+            text_to_minimalsource(text, file_path, start, end, max_chunk_size))
     return chunks
 
 
