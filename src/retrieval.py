@@ -6,7 +6,8 @@ import json
 import os
 from pathlib import Path
 from .index import load_index, tokenize
-from .data_models import (MinimalSource, UnansweredQuestion, Ragdataset,
+from pydantic import ValidationError
+from .data_models import (MinimalSource, UnansweredQuestion, RagDataset,
                           MinimalSearchResults, StudentSearchResults)
 
 
@@ -24,42 +25,29 @@ class Retriever:
         if k <= 0 or not query.strip():
             return []
         tokens = tokenize([query])
-        # Get the ids of the best chunks and their respective score according to bm25
+        # Get the ids of the best chunks and their respective score
         chunk_ids, scores = self.bm25.retrieve(tokens,
                                                k=k,
                                                show_progress=False)
         results = []
-        # Associate the ids and score with zip then return the best chunks in order
+        # Associate ids and score with zip then return the best chunks in order
         for i, score in zip(chunk_ids[0], scores[0]):
             if score > 0:
                 results.append(self.chunk[i])
         return results
 
 
-def get_best_chunk(source_dir: str, query: str,
-                   top_k: int) -> MinimalSource | None:
-    """Retrieve the top chunk that best responds to the query using the BM25 index"""
-    ranked_chunks = get_chunks(source_dir, query, top_k)
-    return ranked_chunks[0] if ranked_chunks else None
-
-
-def get_top_chunks(source_dir: str, query: str,
-                   top_k: int) -> list[MinimalSource]:
-    """Retrieve the top_k chunks that best respond to the query using the BM25 index"""
-    ranked_chunks = get_chunks(source_dir, query, top_k)
-    return ranked_chunks[:top_k] if ranked_chunks else []
-
-
-def load_questions(file_path: str) -> list[UnansweredQuestion]:
-    """Load unanswered questions from a JSON file"""
-    with open(file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    questions = []
-    for item in data:
-        questions.append(
-            UnansweredQuestion(question_id=item["question_id"],
-                               question=item["question"]))
-    return questions
+def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
+    """Load the questions of a RagDataset JSON file"""
+    path = Path(dataset_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Dataset {dataset_path!r} does not exist.")
+    try:
+        dataset = RagDataset.model_validate_json(
+            path.read_text(encoding="utf-8"))
+    except ValidationError as e:
+        raise ValueError(f"Malformed dataset {dataset_path!r}: {e}") from e
+    return list(dataset.rag_questions)
 
 
 def get_minimal_search_results(source_dir: str,
