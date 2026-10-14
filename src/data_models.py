@@ -4,7 +4,7 @@ from typing import Self
 
 
 class MinimalSource(BaseModel):
-    """Minimal representation of a source document.
+    """Single source of information.
 
     text is optional: it is filled by the indexer, but the sources of the
     reference datasets do not have it.
