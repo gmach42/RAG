@@ -79,9 +79,12 @@ def save_answers(answer_results: StudentSearchResultsAndAnswer,
 
 def answer_dataset(student_search_results_path: str,
                    save_directory: str) -> Path:
-    """Main function, same shape as search_dataset"""
-    # TODO
-    pass
+    results_path = Path(student_search_results_path)
+    results = load_search_results(results_path)
+    dataset_path = results_path.dir
+    generator = Generator()
+    answers = answer_questions(generator, results)
+    return save_answers(answers, dataset_path, save_directory)
 
 
 # messages = [
