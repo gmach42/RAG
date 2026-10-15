@@ -69,8 +69,12 @@ def answer_questions(
 
 def save_answers(answer_results: StudentSearchResultsAndAnswer,
                  dataset_path: str, save_directory: str) -> Path:
-    # TODO
-    pass
+    out_dir = Path(save_directory)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / Path(dataset_path).name
+    out_path.write_text(answer_results.model_dump_json(indent=4),
+                        encoding="utf-8")
+    return out_path
 
 
 def answer_dataset(student_search_results_path: str,
