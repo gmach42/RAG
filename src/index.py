@@ -191,6 +191,7 @@ def load_index(output_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
 
     The i-th document of the BM25 index is chunks[i].
     """
+    # TODO clarify this part of the code
     retriever = bm25s.BM25.load(output_dir)
     raw = (Path(output_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
     list_of_dicts = json.loads(raw)
