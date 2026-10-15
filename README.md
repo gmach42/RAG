@@ -21,3 +21,41 @@
 	llm tutorial for transformers: https://huggingface.co/docs/transformers/llm_tutorial
 ## AI usage
 	doc for transformers, chunk manipulation, bm25s, basic explanation of tools
+
+![Saving/Loading index](save_load_index.png)
+
+List of useful functions used throughout the project:
+Pathlib functions:
+```python
+path.write_text("some text")
+path.read_text()
+path.mkdir(parents=True, exist_ok=True)
+path.name
+path.suffix
+src_dir = Path(...)
+src_dir.exists()
+src_dir.rglob("*")
+src_dir.rglob("*.py")
+```
+
+BM25s functions:
+```python
+tokens = bm25s.tokenize(["txt1", "txt2"], stopwords="en")
+retriever = bm25s.BM25() # default values
+retriever = bm25s.BM25.load("data/processed/bm25")
+retriever.index(tokens)
+retriever.save("data/processed/bm25")
+ids, scores = retriever.retrieve(tokens, k=5)
+ids[0], scores[0] # first retrieved document and its score
+```
+
+Pydantic functions:
+```python
+from pydantic import TypeAdapter
+
+Model.model_dump()
+Model.model_dump_json()
+Model.model_validate()
+TypeAdapter(Model).dump_json(instance)
+```
+

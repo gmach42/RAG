@@ -181,7 +181,8 @@ def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     retriever.save(str(out))
-    data = [chunk.model_dump() for chunk in chunks]
+    data = [chunk.model_dump() for chunk in chunks]  # get a list of dict
+    # using the function write_text of pathlib to replace os -> json.dumps -> open("w")
     (out / CHUNKS_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
 
@@ -192,5 +193,11 @@ def load_index(output_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
     """
     retriever = bm25s.BM25.load(output_dir)
     raw = (Path(output_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
-    chunks = [MinimalSource(**data) for data in json.loads(raw)]
+    list_of_dicts = json.loads(raw)
+    chunks = []
+    for data in list_of_dicts:
+        source = MinimalSource(**data)
+        chunks.append(source)
+    # Could also have used :
+    # chunks = TypeAdapter(list[MinimalSource]).validate_json(raw)
     return retriever, chunks

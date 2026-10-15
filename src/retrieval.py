@@ -2,8 +2,7 @@
 the chunks (minimalSource) which respond the best to the query (prompt)
 """
 
-import json
-import os
+from tqdm import tqdm
 from pathlib import Path
 from .index import load_index, tokenize
 from pydantic import ValidationError
@@ -21,6 +20,9 @@ class Retriever:
         self.bm25, self.chunks = load_index(index_dir)
 
     def search(self, query: str, top_k: int) -> list[MinimalSource]:
+        """From a query and a given top_k, search for the top_k chunks depending of their bm25s score,
+        Returns a list of MinimalSource
+        """
         k = min(top_k, len(self.chunks))
         if k <= 0 or not query.strip():
             return []
@@ -38,7 +40,10 @@ class Retriever:
 
 
 def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
-    """Load the questions of a RagDataset JSON file"""
+    """Load the questions of a RagDataset JSON file,
+
+    Returns a list of UnansweredQuestion
+    """
     path = Path(dataset_path)
     if not path.is_file():
         raise FileNotFoundError(f"Dataset {dataset_path!r} does not exist.")
@@ -52,7 +57,9 @@ def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
 
 def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
                      top_k: int) -> StudentSearchResults:
-    """Retrieve the top_k chunks for each question"""
+    """Retrieve the top_k chunks for each question using the search function of our Retriever,
+    returns StudentSearchResults
+    """
     results = [
         MinimalSearchResults(question_id=q.question_id,
                              question=q.question,
@@ -74,14 +81,18 @@ def save_search_results(search_results: StudentSearchResults,
     return out_path
 
 
-def retrieve_and_save_results(source_dir: str, questions_file: str, top_k: int,
-                              output_dir: str) -> StudentSearchResults:
-    # TODO fix save_search_result
-    check_error(source_dir, questions_file, output_dir, top_k)
-    questions = load_questions(questions_file)
-    search_results = get_search_results(source_dir, questions, top_k)
-    save_search_results(search_results, output_dir)
-    return search_results
+def search_dataset(index_dir: str, dataset_path: str, top_k: int,
+                   save_directory: str) -> Path:
+    """Main function of retrieval.py:
 
+    For a given RagDataset (list of UnansweredQuestion),
+    load them and search the best chunks reponding to them thanks to Retriever
 
-# TODO add a funciton to pipeline the file (search_dataset)
+    Returns the path of the results of theses search
+    """
+    if top_k <= 0:
+        raise ValueError(f"k must be a positve integer, got {top_k}.")
+    questions = load_questions(dataset_path)
+    retriever = Retriever(index_dir)
+    results = search_questions(retriever, questions, top_k)
+    return save_search_results(results, dataset_path, save_directory)
