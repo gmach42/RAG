@@ -2,9 +2,9 @@
 """
 
 from transformers import pipeline
-from .data_models import RagDataset, MinimalAnswer, MinimalSource, MinimalSearchResults, UnansweredQuestion, StudentSearchResults, StudentSearchResultsAndAnswer
+from .data_models import (MinimalAnswer, MinimalSource, StudentSearchResults,
+                          StudentSearchResultsAndAnswer)
 from pathlib import Path
-import bm25s
 from pydantic import ValidationError
 from tqdm import tqdm
 
@@ -19,20 +19,28 @@ class Generator:
 
     def answer(self, question: str, sources: list[MinimalSource]) -> str:
         """Build the prompt from the sources and generate the answer"""
-        prompt: str = ""
-        if not question:
-            raise ValueError("no quesiton asked")
-        prompt += f"User request: {question}\n"
-        if not sources:
-            raise ValueError(
-                f"no sources has been found for this question {question}")
-        prompt += f"Here's is documentation used to respond to it: {sources!r}"
-
-        answer = pipeline(prompt, max_new_tokens=512)
-
-        # TODO to fix / comprehend what qwen hope for + what it gives back
-
-        return answer
+        context: str = ""
+        for i, src in enumerate(sources, start=1):
+            entry = f"[{i}] {src.file_path}\n{src.text}\n"
+            context += entry
+        chat = [{
+            "role":
+            "system",
+            "content":
+            ("You answer questions about the vLLM codebase."
+             "Use ONLY the provided context."
+             "If the answer is not in the context, say you don't know.")
+        }, {
+            "role":
+            "user",
+            "content":
+            f"Context:\n{context}\n\nQuestion: {question} /no_think"
+        }]
+        out = self.pipe(chat, max_new_tokens=256)
+        # See https://huggingface.co/docs/transformers/conversations
+        # for more explanation on text
+        text: str = out[0]["generated_text"][-1]["content"]
+        return text.strip()
 
 
 def load_search_results(search_dir: str) -> StudentSearchResults:
@@ -69,34 +77,17 @@ def answer_questions(
 
 def save_answers(answer_results: StudentSearchResultsAndAnswer,
                  dataset_path: str, save_directory: str) -> Path:
-    out_dir = Path(save_directory)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / Path(dataset_path).name
-    out_path.write_text(answer_results.model_dump_json(indent=4),
-                        encoding="utf-8")
-    return out_path
+    output_dir = Path(save_directory)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / Path(dataset_path).name
+    output_path.write_text(answer_results.model_dump_json(indent=4),
+                           encoding="utf-8")
+    return output_path
 
 
 def answer_dataset(student_search_results_path: str,
                    save_directory: str) -> Path:
-    results_path = Path(student_search_results_path)
-    results = load_search_results(results_path)
-    dataset_path = results_path.dir
+    results = load_search_results(student_search_results_path)
     generator = Generator()
     answers = answer_questions(generator, results)
-    return save_answers(answers, dataset_path, save_directory)
-
-
-# messages = [
-#     {
-#         "role": "system",
-#         "content": "Answer only from the context. If it's not there, say so."
-#     },
-#     {
-#         "role": "user",
-#         "content": f"Context:\n{context}\n\nQuestion: {question} /no_think"
-#     },
-# ]
-# # do_sample=False ensures deterministic output (greedy)
-# out = pipe(messages, max_new_tokens=256, do_sample=False)
-# answer = out[0]["generated_text"][-1]["content"]
+    return save_answers(answers, student_search_results_path, save_directory)

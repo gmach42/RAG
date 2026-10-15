@@ -74,12 +74,12 @@ def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
 def save_search_results(search_results: StudentSearchResults,
                         dataset_path: str, save_directory: str) -> Path:
     """Save the results under save_directory, named after the dataset"""
-    out_dir = Path(save_directory)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / Path(dataset_path).name
-    out_path.write_text(search_results.model_dump_json(indent=4),
-                        encoding="utf-8")
-    return out_path
+    output_dir = Path(save_directory)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / Path(dataset_path).name
+    output_path.write_text(search_results.model_dump_json(indent=4),
+                           encoding="utf-8")
+    return output_path
 
 
 def search_dataset(index_dir: str, dataset_path: str, top_k: int,
