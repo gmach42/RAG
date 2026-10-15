@@ -11,6 +11,7 @@ from .data_models import (MinimalSource, UnansweredQuestion, RagDataset,
 
 
 class Retriever:
+    """Class used to load the index ONCE and then operate on it"""
 
     def __init__(self, index_dir: str) -> None:
         """Load the BM25 index (index + chunks)"""

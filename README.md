@@ -11,6 +11,9 @@
 # Performance analysis
 # Design decisions
 # Challenges faced
+
+Problèmes de compréhension du sujet au niveau des data Models qui nous sont imposés. En effet beaucoup de modèles sont assez flous sur leur concrète utilisation/utilité dans le projet. Un exemple concret serait AnswerQuestion, qui représente une question CORRIGÉE au préalable. Elle est simplement décrite dans le sujet comme "AnsweredQuestion model represent an answered question". OUI MAIS ENCORE? Il aurait été utile de préciser lors de la présentation du modèle qu'il servait à comparer nos résultats stockés dans MinimalAnswer avec les réponses correctes (en tout cas celles attendues) de AnsweredQuestion.
+
 # Example usage
 # Resources
 	Way of chunking for RAG: https://blog.stephane-robert.info/docs/developper/programmation/python/rag-chunking/

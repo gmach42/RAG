@@ -6,43 +6,59 @@ Hallucinations are minimized but may still occur.
 """
 
 from transformers import pipeline
-from .data_models import RagDataset, MinimalAnswer, MinimalSource, MinimalSearchResults, UnansweredQuestion
-
-# device_map allow to make use of the GPU if there's one available (else CPU)
-pipe = pipeline(task="text-generation",
-                model="Qwen/Qwen3-0.6B",
-                device_map="auto")
+from .data_models import RagDataset, MinimalAnswer, MinimalSource, MinimalSearchResults, UnansweredQuestion, StudentSearchResults, StudentSearchResultsAndAnswer
+from pathlib import Path
 
 
-def load_unsanwered_question() -> list[UnansweredQuestion]:
-    pass  # TODO
+class Generator:
+
+    def __init__(self, model_name: str = "Qwen/Qwen3-0.6B") -> None:
+        """Load the LLM pipeline one"""
+        self.pipe = pipeline(task="text-generation",
+                             model=model_name,
+                             device_map="auto")
+
+    def answer(self, question: str, sources: list[MinimalSource]) -> str:
+        """Build the prompt from the sources and generate the answer"""
+        pass
 
 
-def init_data_set() -> RagDataset:
-    pass  # TODO
+def load_search_results(search_dir: str) -> StudentSearchResults:
+    """Load the results (questions + chunks from src corresponding)"""
+    # TODO
+    pass
 
 
-def get_minimal_search_results() -> MinimalSearchResults:
-    """"""
-    pass  # TODO
+def answer_questions(
+        generator: Generator,
+        results: StudentSearchResults) -> StudentSearchResultsAndAnswer:
+    # TODO
+    pass
 
 
-def get_minimal_answer(search_results: MinimalSearchResults,
-                       query: str) -> MinimalAnswer:
-    """Give the minimal answer from the model to the query constrained by the chunks selected"""
-    pass  # TODO
+def save_answers(answer_results: StudentSearchResultsAndAnswer,
+                 dataset_path: str, save_directory: str) -> Path:
+    # TODO
+    pass
 
 
-messages = [
-    {
-        "role": "system",
-        "content": "Answer only from the context. If it's not there, say so."
-    },
-    {
-        "role": "user",
-        "content": f"Context:\n{context}\n\nQuestion: {question} /no_think"
-    },
-]
-# do_sample=False ensures deterministic output (greedy)
-out = pipe(messages, max_new_tokens=256, do_sample=False)
-answer = out[0]["generated_text"][-1]["content"]
+def answer_dataset(student_search_results_path: str,
+                   save_directory: str) -> Path:
+    """Main function, same shape as search_dataset"""
+    # TODO
+    pass
+
+
+# messages = [
+#     {
+#         "role": "system",
+#         "content": "Answer only from the context. If it's not there, say so."
+#     },
+#     {
+#         "role": "user",
+#         "content": f"Context:\n{context}\n\nQuestion: {question} /no_think"
+#     },
+# ]
+# # do_sample=False ensures deterministic output (greedy)
+# out = pipe(messages, max_new_tokens=256, do_sample=False)
+# answer = out[0]["generated_text"][-1]["content"]
