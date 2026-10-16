@@ -164,3 +164,79 @@ Answering:
 	- On utilise les chunks récupérés lors de la phase de retrieval pour générer les réponses aux questions posées.
 	- Il est conseillé de désactiver l'aléatoire de Qwen
 	- Faire en sorte que Qwen n'hallucine pas en se basant uniquement sur les chunks récupérés.
+
+
+============================== OUTPUT PREP ==============================
+
+Commands to do:
+
+- index -max_chunk_size <int>
+    Ingest data/raw/ and build the index under data/processed/.
+- search <query> -k <int>
+    Return the top-k sources for a single query
+- search_dataset -dataset_path <path> -k <int> -save_directory <dir>
+    Run search over a whole dataset and write a StudentSearchResults JSON file.
+- answer <query> -k <int>
+    Answer a single query using the retrieved context
+- answer_dataset -student_search_results_path <path> -save_directory <dir>
+    Generate answers for a dataset, producing a StudentSearchResultsAndAnswer JSON file.
+- evaluate -student_search_results_path <path> -dataset_path <path>
+    Report your own recall@k against a ground-truth dataset, for your own testing.
+
+All input and output paths must be configurable CLI arguments and never hard-coded.
+Include progress bars (tqdm) for long-running operations, and handle degenerate inputs
+(empty query, nonsensical query, k=0, missing files, malformed JSON) gracefully. The
+CLI is tested with such edge cases and must never crash with an unhandled traceback.
+
+• data/output/search_results/<DatasetScope>/: the output of search_dataset,
+scoped by dataset.
+• data/output/search_results_and_answer/<DatasetScope>/: the output of answer_dataset,
+scoped by dataset.
+
+All input and output paths (--dataset_path, --save_directory, --student_search_results_path)
+must be configurable CLI arguments and must never be hard-coded: the evaluator points
+them at the datasets and at dedicated output directories. If the structure or the com-
+mand interface is not respected, the reference scripts cannot run and the corresponding
+checks are considered failed by design
+
+1. index the corpus
+2. search a whole dataset
+3. score the results with the moulinette
+4. generate answers
+
+// for the search and answer query commands, it's the same behavior but on one question at a time
+
+Example:
+```python
+1. Index the corpus once:
+
+uv run python -m src index --max_chunk)size 2000
+Index done, indeces saved under data/processed/
+
+2. Search a dataset:
+
+uv run python -m src search_dataset
+    --dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json
+    --k 10
+    --save_directory data/output/search_results/UnansweredQuestions
+Saved student_search_results to data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+
+3. Score with the moulinette
+
+/moulinette evaluate_student_search_results
+    data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+    data/datasets/AnsweredQuestions/dataset_docs_public.json
+    --k 10 --max_context_length 2000
+
+Student data is valid: True
+Evaluation Results
+========================================
+Recall@1: 0.450 Recall@3: 0.590 Recall@5: 0.650 Recall@10: 0.720
+
+4. Generate answers
+
+uv run python -m src answer_dataset
+--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+--save_directory data/output/search_results_and_answer/UnansweredQuestions
+Loaded 100 questions ... Processed 100 of 100 questions
+Saved student_search_results_and_answer to .../UnansweredQuestions/dataset_docs_public.json

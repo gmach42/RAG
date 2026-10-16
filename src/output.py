@@ -21,3 +21,29 @@ Include progress bars (tqdm) for long-running operations, and handle degenerate 
 (empty query, nonsensical query, k=0, missing files, malformed JSON) gracefully. The
 CLI is tested with such edge cases and must never crash with an unhandled traceback.
 """
+
+"""
+uv run python -m src index --max_chunk)size 2000
+uv run python -m src search_dataset
+    --dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json
+    --k 10
+    --save_directory data/output/search_results/UnansweredQuestions
+/moulinette evaluate_student_search_results
+    data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+    data/datasets/AnsweredQuestions/dataset_docs_public.json
+    --k 10 --max_context_length 2000
+uv run python -m src answer_dataset
+    --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+    --save_directory data/output/search_results_and_answer/UnansweredQuestions
+"""
+
+import fire
+
+
+DEFAULT_RAW_PATH = "data/raw/"
+DEFAULT_INDEX_PATH = "data/processed/"
+DEFAULT_OUTPUT_PATH = "data/output/"
+
+class CLI:
+    def __init__(self) -> None:
+
