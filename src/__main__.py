@@ -1,7 +1,12 @@
 """Entry point for `python -m src`."""
 import fire
+import sys
 
 from src.output import CLI
 
 if __name__ == "__main__":
-    fire.Fire(CLI)
+    try:
+        fire.Fire(CLI)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

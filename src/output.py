@@ -1,5 +1,6 @@
 """Manage CLI config / output"""
-# TODO
+
+import fire
 """
 Commands to do:
 
@@ -21,7 +22,6 @@ Include progress bars (tqdm) for long-running operations, and handle degenerate 
 (empty query, nonsensical query, k=0, missing files, malformed JSON) gracefully. The
 CLI is tested with such edge cases and must never crash with an unhandled traceback.
 """
-
 """
 uv run python -m src index --max_chunk)size 2000
 uv run python -m src search_dataset
@@ -37,13 +37,41 @@ uv run python -m src answer_dataset
     --save_directory data/output/search_results_and_answer/UnansweredQuestions
 """
 
-import fire
+DEFAULT_RAW_PATH: str = "data/raw/"
+DEFAULT_INDEX_PATH: str = "data/processed/"
+DEFAULT_OUTPUT_PATH: str = "data/output/"
+DEFAULT_DATASET_PATH: str = "data/datasets/"
+DEFAULT_MAX_CHUNK_SIZE: int = 2000
 
-
-DEFAULT_RAW_PATH = "data/raw/"
-DEFAULT_INDEX_PATH = "data/processed/"
-DEFAULT_OUTPUT_PATH = "data/output/"
 
 class CLI:
-    def __init__(self) -> None:
+    """RAG command line interface."""
 
+    def index(self,
+              max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE,
+              save_directory: str = DEFAULT_INDEX_PATH) -> None:
+        """Index the src used by the llm to resolve the query and save it under the designed directory"""
+        pass
+
+    def search(self,
+               query: str,
+               k: int = 10,
+               index_dir: str = DEFAULT_INDEX_PATH) -> None:
+        pass
+
+    def search_dataset(self,
+                       dataset_path: str = DEFAULT_DATASET_PATH,
+                       k: int = 10,
+                       save_directory: str = DEFAULT_OUTPUT_PATH) -> None:
+        pass
+
+    def answer(self, query: str, k: int = 10) -> None:
+        pass
+
+    def answer_dataset(self, output_dir: str = DEFAULT_OUTPUT_PATH) -> None:
+        pass
+
+    def evaluate(self,
+                 output_dir: str = DEFAULT_OUTPUT_PATH,
+                 dataset_dir: str = DEFAULT_DATASET_PATH) -> None:
+        pass
