@@ -12,6 +12,7 @@ from .data_models import MinimalSource
 
 CORPUS_SUFFIXES = {".md", ".txt", ".py"}
 CHUNKS_FILENAME = "chunks.json"
+BM25_PARAMS_FILENAME = "params.index.json"  # written by bm25s.BM25.save
 
 
 def list_corpus_files(raw_dir: str) -> list[Path]:
@@ -191,14 +192,25 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
 
     The i-th document of the BM25 index is chunks[i].
     """
-    # TODO clarify this part of the code
-    retriever = bm25s.BM25.load(index_dir)
-    raw = (Path(index_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
-    list_of_dicts = json.loads(raw)
-    chunks = []
-    for data in list_of_dicts:
-        source = MinimalSource(**data)
-        chunks.append(source)
+    # Check the files themselves: an existing but empty directory
+    # would otherwise make bm25s fail with a raw [Errno 2].
+    required = (BM25_PARAMS_FILENAME, CHUNKS_FILENAME)
+    if not all((Path(index_dir) / name).is_file() for name in required):
+        raise FileNotFoundError(
+            f"No index in {index_dir!r}, run the index command first.")
+    try:
+        retriever = bm25s.BM25.load(index_dir)
+        raw = (Path(index_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
+        list_of_dicts = json.loads(raw)
+        chunks = []
+        for data in list_of_dicts:
+            source = MinimalSource(**data)
+            chunks.append(source)
+    # JSONDecodeError and pydantic's ValidationError are ValueErrors
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise ValueError(
+            f"Index in {index_dir!r} is corrupted, "
+            f"run the index command again ({e})") from e
     # Could also have used :
     # chunks = TypeAdapter(list[MinimalSource]).validate_json(raw)
     return retriever, chunks

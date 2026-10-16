@@ -15,9 +15,6 @@ class Retriever:
 
     def __init__(self, index_dir: str) -> None:
         """Load the BM25 index (index + chunks)"""
-        if not Path(index_dir).is_dir():
-            raise FileNotFoundError(
-                f"No index in {index_dir!r}, run the index command first.")
         self.bm25, self.chunks = load_index(index_dir)
 
     def search(self, query: str, top_k: int) -> list[MinimalSource]:
