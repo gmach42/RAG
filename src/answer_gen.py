@@ -1,12 +1,14 @@
 """Module for generating answers based on retrieved chunks.
 """
 
-from transformers import logging as pipeline
+from transformers import pipeline
 from .data_models import (MinimalAnswer, MinimalSource, StudentSearchResults,
                           StudentSearchResultsAndAnswer)
 from pathlib import Path
 from pydantic import ValidationError
 from tqdm import tqdm
+
+REFUSAL: str = "I don't know based on the vLLM sources."
 
 
 class Generator:
@@ -19,27 +21,48 @@ class Generator:
         # The pipeline copies the legacy max_length=20 into its config,
         # which clashes with max_new_tokens on every call.
         self.pipe.generation_config.max_length = None
+        # Set generation params on the config rather than at call time:
+        # passing both a config and kwargs is deprecated in transformers.
+        self.pipe.generation_config.max_new_tokens = 256
+        # Greedy decoding: same answer on every run, less made-up content.
+        # Qwen's sampling params are cleared so they don't trigger warnings.
+        for config in (self.pipe.generation_config,
+                       self.pipe.model.generation_config):
+            config.do_sample = False
+            config.temperature = None
+            config.top_p = None
+            config.top_k = None
 
     def answer(self, question: str, sources: list[MinimalSource]) -> str:
         """Build the prompt from the sources and generate the answer"""
         context: str = ""
         for i, src in enumerate(sources, start=1):
-            entry = f"[{i}] {src.file_path}\n{src.text}\n"
+            entry = f"[{i}] {src.file_path}\n{src.text}\n\n"
             context += entry
+        # A small model follows rules better when they come right after
+        # the sources, close to where it starts writing.
         chat = [{
             "role":
             "system",
             "content":
-            ("You answer questions about the vLLM codebase."
-             "Use ONLY the provided context."
-             "If the answer is not in the context, say you don't know.")
+            ("You are a documentation assistant for the vLLM library. "
+             "You only answer questions about vLLM, "
+             "using only the sources given by the user.")
         }, {
             "role":
             "user",
             "content":
-            f"Context:\n{context}\n\nQuestion: {question} /no_think"
+            (f"Sources:\n{context}\n"
+             f"Question: {question}\n\n"
+             "Rules:\n"
+             "- If the question is not about vLLM, or the sources do not "
+             f"contain the answer, reply exactly: \"{REFUSAL}\"\n"
+             "- Otherwise answer in a few sentences, using only the "
+             "sources, and cite them like [1].\n"
+             "/no_think")
         }]
-        out = self.pipe(chat, max_new_tokens=256)
+        # Qwen uses a BPE tokenizer: space clean-up would corrupt the text
+        out = self.pipe(chat, clean_up_tokenization_spaces=False)
         # See https://huggingface.co/docs/transformers/conversations
         # for more explanation on text
         text: str = out[0]["generated_text"][-1]["content"]

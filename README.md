@@ -25,6 +25,8 @@ Problèmes de compréhension du sujet au niveau des data Models qui nous sont im
 ## AI usage
 	doc for transformers, chunk manipulation, bm25s, basic explanation of tools
 	Used to fix an obscure error from transformers which had conflict with max_new_tokens=256 and max_length=20 cause by the default config in text-generation?
+	Other transformers errors not cause directly by my project
+	Used to fix some problems linked to the model beginning to go through exterior sources although he was STRICTLY being contained by the prompt
 
 ![Saving/Loading index](save_load_index.png)
 

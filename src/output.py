@@ -94,7 +94,8 @@ class CLI:
         srcs = retriever.search(q, top_k)
         generator = Generator()
         print(
-            f"The answer for the query {q} is: \n{generator.answer(q, srcs)}")
+            f"The answer for the query '{q}' is: \n{generator.answer(q, srcs)}"
+        )
 
     def answer_dataset(
             self,
@@ -103,7 +104,6 @@ class CLI:
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         save_directory = self._check_path(save_directory, "save_directory")
-        # TODO print(f"Loaded 100 questions ... Processed 100 of 100 questions")
         path = answer_gen.answer_dataset(student_search_results_path,
                                          save_directory)
         print(f"Saved student_search_results_path_and_answer to {path}")
