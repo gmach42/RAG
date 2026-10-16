@@ -24,6 +24,7 @@ Problèmes de compréhension du sujet au niveau des data Models qui nous sont im
 	llm tutorial for transformers: https://huggingface.co/docs/transformers/llm_tutorial
 ## AI usage
 	doc for transformers, chunk manipulation, bm25s, basic explanation of tools
+	Used to fix an obscure error from transformers which had conflict with max_new_tokens=256 and max_length=20 cause by the default config in text-generation?
 
 ![Saving/Loading index](save_load_index.png)
 
