@@ -36,7 +36,7 @@ class Retriever:
         # Associate ids and score with zip then return the best chunks in order
         for i, score in zip(chunk_ids[0], scores[0]):
             if score > 0:
-                results.append(self.chunk[i])
+                results.append(self.chunks[i])
         return results
 
 
@@ -74,9 +74,9 @@ def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
 def save_search_results(search_results: StudentSearchResults,
                         dataset_path: str, save_directory: str) -> Path:
     """Save the results under save_directory, named after the dataset"""
-    output_dir = Path(save_directory)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / Path(dataset_path).name
+    save_dir = Path(save_directory)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    output_path = save_dir / Path(dataset_path).name
     output_path.write_text(search_results.model_dump_json(indent=4),
                            encoding="utf-8")
     return output_path

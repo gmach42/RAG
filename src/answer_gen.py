@@ -43,18 +43,21 @@ class Generator:
         return text.strip()
 
 
-def load_search_results(search_dir: str) -> StudentSearchResults:
+def load_search_results(
+        student_search_results_path: str) -> StudentSearchResults:
     """Load the results (questions + chunks from src corresponding)"""
-    path = Path(search_dir)
+    path = Path(student_search_results_path)
     if not path.is_file():
         raise FileNotFoundError(
-            f"StudentSearchResults {search_dir!r} does not exist.")
+            f"StudentSearchResults {student_search_results_path!r} "
+            "does not exist.")
     try:
         results = StudentSearchResults.model_validate_json(
             path.read_text(encoding="utf-8"))
     except ValidationError as e:
         raise ValueError(
-            f"Malformed StudentSearchResults {search_dir!r}: {e}") from e
+            f"Malformed StudentSearchResults "
+            f"{student_search_results_path!r}: {e}") from e
     return results
 
 
@@ -76,10 +79,11 @@ def answer_questions(
 
 
 def save_answers(answer_results: StudentSearchResultsAndAnswer,
-                 dataset_path: str, save_directory: str) -> Path:
-    output_dir = Path(save_directory)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / Path(dataset_path).name
+                 student_search_results_path: str,
+                 save_directory: str) -> Path:
+    save_dir = Path(save_directory)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    output_path = save_dir / Path(student_search_results_path).name
     output_path.write_text(answer_results.model_dump_json(indent=4),
                            encoding="utf-8")
     return output_path

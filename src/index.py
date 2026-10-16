@@ -149,7 +149,7 @@ def tokenize(texts: list[str],
 
 
 def build_index(raw_dir: str,
-                output_dir: str,
+                index_dir: str,
                 max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> None:
     """Main function to build the BM25 index from raw text files.
 
@@ -169,16 +169,16 @@ def build_index(raw_dir: str,
         raise ValueError(f"No chunk to index in {raw_dir!r}")
     retriever = bm25s.BM25()
     retriever.index(tokenize([c.text for c in chunks], show_progress=True))
-    save_index(retriever, chunks, output_dir)
+    save_index(retriever, chunks, index_dir)
 
 
 # === Save and Load Index ===
 
 
 def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
-               output_dir: str) -> None:
-    """Save BM25 index and chunks metadatas (json) in output_dir"""
-    out = Path(output_dir)
+               index_dir: str) -> None:
+    """Save BM25 index and chunks metadatas (json) in index_dir"""
+    out = Path(index_dir)
     out.mkdir(parents=True, exist_ok=True)
     retriever.save(str(out))
     data = [chunk.model_dump() for chunk in chunks]  # get a list of dict
@@ -186,14 +186,14 @@ def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
     (out / CHUNKS_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
 
-def load_index(output_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
+def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
     """Reload index + chunks. Used by retrieval.py
 
     The i-th document of the BM25 index is chunks[i].
     """
     # TODO clarify this part of the code
-    retriever = bm25s.BM25.load(output_dir)
-    raw = (Path(output_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
+    retriever = bm25s.BM25.load(index_dir)
+    raw = (Path(index_dir) / CHUNKS_FILENAME).read_text(encoding="utf-8")
     list_of_dicts = json.loads(raw)
     chunks = []
     for data in list_of_dicts:
