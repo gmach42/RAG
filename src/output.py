@@ -53,9 +53,11 @@ class CLI:
               raw_dir: str = DEFAULT_RAW_DIR,
               index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """Index the src used by the llm to resolve the query and save it under the designed directory"""
-        max_size = self._check_max_chunk_size(max_chunk_size)
+        max_chunk_size = self._check_max_chunk_size(max_chunk_size)
         raw_dir = self._check_path(raw_dir, "raw_dir")
         index_dir = self._check_path(index_dir, "index_dir")
+        build_index(raw_dir, index_dir, max_chunk_size)
+        print(f"Indexation complete, indices saved under {index_dir}")
 
     def search(self,
                query: str,
@@ -77,8 +79,9 @@ class CLI:
         dataset_path = self._check_path(dataset_path, "dataset_path")
         save_directory = self._check_path(save_directory, "save_directory")
         index_dir = self._check_path(index_dir, "index_dir")
-        retrieval.search_dataset(index_dir, dataset_path, top_k,
-                                 save_directory)
+        path = retrieval.search_dataset(index_dir, dataset_path, top_k,
+                                        save_directory)
+        print(f"Saved student_seach_results to {path!r}")
 
     def answer(self,
                query: str,
@@ -100,9 +103,12 @@ class CLI:
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         save_directory = self._check_path(save_directory, "save_directory")
+        # TODO print(f"Loaded 100 questions ... Processed 100 of 100 questions")
+        path = answer_gen.answer_dataset(student_search_results_path,
+                                         save_directory)
+        print(f"Saved student_search_results_path_and_answer to {path}")
 
-    def evaluate(self,
-                 student_search_results_path: str,
+    def evaluate(self, student_search_results_path: str,
                  dataset_path: str) -> None:
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
