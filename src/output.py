@@ -15,4 +15,9 @@ Commands to do:
     Generate answers for a dataset, producing a StudentSearchResultsAndAnswer JSON file.
 - evaluate -student_search_results_path <path> -dataset_path <path>
     Report your own recall@k against a ground-truth dataset, for your own testing.
+
+All input and output paths must be configurable CLI arguments and never hard-coded.
+Include progress bars (tqdm) for long-running operations, and handle degenerate inputs
+(empty query, nonsensical query, k=0, missing files, malformed JSON) gracefully. The
+CLI is tested with such edge cases and must never crash with an unhandled traceback.
 """
