@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "accelerate>=1.15.0",
     "bm25s>=0.3.13",
     "fire>=0.7.1",
     "pydantic>=2.12.2",
