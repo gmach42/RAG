@@ -7,17 +7,43 @@ install:
 	uv sync
 
 run:
-	$(PYTHON) -m src index --max_chunk_size 2000
-	$(PYTHON) -m src search_dataset \
-    --dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json \
-    --k 10 \
-    --save_directory data/output/search_results/UnansweredQuestions
-	$(PYTHON) -m src answer_dataset \
-    --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
-    --save_directory data/output/search_results_and_answer/UnansweredQuestions
-	$(PYTHON) -m src evaluate \
-    --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
-    --dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
+	@echo "Please enter the CLI commands in order, here's a default example:"
+	@echo "INDEX:"
+	@echo "  uv run python -m src index --max_chunk_size 2000"
+	@echo "RETRIEVE:"
+	@echo "  uv run python -m src search_dataset"
+	@echo "		--dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json"
+	@echo "		--k 10"
+	@echo "		--save_directory data/output/search_results/UnansweredQuestions"
+	@echo "EVALUATE:"
+	@echo "  /moulinette evaluate_student_search_results"
+	@echo "  	data/output/search_results/UnansweredQuestions/dataset_docs_public.json"
+	@echo "  	data/datasets/AnsweredQuestions/dataset_docs_public.json"
+	@echo "  	--k 10 --max_context_length 2000""
+	@echo "ANSWER:"
+	@echo "  uv run python -m src answer_dataset"
+	@echo "		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json"
+	@echo "		--save_directory data/output/search_results_and_answer/UnansweredQuestions"
+
+
+commands:
+	@echo "Please enter the CLI commands in order, here's a default example:"
+	@echo "INDEX:"
+	@echo "  uv run python -m src index --max_chunk_size <value>"
+	@echo "RETRIEVE:"
+	@echo "  uv run python -m src search_dataset"
+	@echo "		--dataset_path <file_path>"
+	@echo "		--k <k>"
+	@echo "		--save_directory <dir_path>"
+	@echo "EVALUATE:"
+	@echo "  /moulinette evaluate_student_search_results"
+	@echo "  	<unanswered_questions_file_path>"
+	@echo "  	<answered_questions_file_path>"
+	@echo "  	--k <k> --max_context_length <value>"
+	@echo "ANSWER:"
+	@echo "  uv run python -m src answer_dataset"
+	@echo "		--student_search_results_path <file_path>"
+	@echo "		--save_directory <dir_path>"
 
 debug:
 	$(PYTHON) -m pdb -m src
@@ -34,4 +60,4 @@ lint-strict:
 	$(FLAKE8) $(LINT_PATHS)
 	$(MYPY) $(LINT_PATHS) --strict
 
-.PHONY: install run debug clean lint lint-strict
+.PHONY: install run debug clean lint lint-strict setup
