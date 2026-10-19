@@ -49,6 +49,7 @@ def evaluate(dataset_path: str,
     results: StudentSearchResults = load_search_results(
         student_search_results_path)
     answered: list[AnsweredQuestion] = load_answered(dataset_path)
+    # Index the sources found for each question by its id
     results_by_id = {
         r.question_id: r.retrieved_sources
         for r in results.search_results
