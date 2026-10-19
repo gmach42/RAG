@@ -57,7 +57,7 @@ class CLI:
         raw_dir = self._check_path(raw_dir, "raw_dir")
         index_dir = self._check_path(index_dir, "index_dir")
         build_index(raw_dir, index_dir, max_chunk_size)
-        print(f"Indexation complete, indices saved under {index_dir}")
+        print(f"Indexation complete, indices saved under {index_dir}\n")
 
     def search(self,
                query: str,
@@ -81,7 +81,7 @@ class CLI:
         index_dir = self._check_path(index_dir, "index_dir")
         path = retrieval.search_dataset(index_dir, dataset_path, top_k,
                                         save_directory)
-        print(f"Saved student_seach_results to {path!r}")
+        print(f"Saved student_seach_results to {path!r}\n")
 
     def answer(self,
                query: str,
@@ -94,7 +94,7 @@ class CLI:
         srcs = retriever.search(q, top_k)
         generator = Generator()
         print(
-            f"The answer for the query '{q}' is: \n{generator.answer(q, srcs)}"
+            f"The answer for the query '{q}' is: \n{generator.answer(q, srcs)}\n"
         )
 
     def answer_dataset(
@@ -106,7 +106,7 @@ class CLI:
         save_directory = self._check_path(save_directory, "save_directory")
         path = answer_gen.answer_dataset(student_search_results_path,
                                          save_directory)
-        print(f"Saved student_search_results_path_and_answer to {path}")
+        print(f"Saved student_search_results_path_and_answer to {path}\n")
 
     def evaluate(self, student_search_results_path: str,
                  dataset_path: str) -> None:
