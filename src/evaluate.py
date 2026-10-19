@@ -53,19 +53,9 @@ def evaluate(dataset_path: str,
         r.question_id: r.retrieved_sources
         for r in results.search_results
     }
-    # recalls = {}
-    # for k in K_VALUES:
-    #     recalls = {
-    #         k:
-    #         mean(
-    #             recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)
-    #             for q in answered)
-    #     }
-    recalls = {
-        k:
-        mean(
+    recalls = {}
+    for k in K_VALUES:
+        recalls[k] = mean(
             recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)
             for q in answered)
-        for k in K_VALUES
-    }
     return recalls
