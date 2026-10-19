@@ -1,63 +1,59 @@
-PYTHON := uv run python
-FLAKE8 := uv run flake8
-MYPY := uv run mypy
 LINT_PATHS := src
+
+# Overridable:
+MAX_CHUNK_SIZE ?= 2000
+K ?= 10
+DATASET ?= data/datasets/UnansweredQuestions/dataset_docs_public.json
+ANSWERED_QUESTIONS ?= data/datasets/AnsweredQuestions/dataset_docs_public.json
+SEARCH_DIR ?= data/output/search_results/UnansweredQuestions
+ANSWER_DIR ?= data/output/search_results_and_answer/UnansweredQuestions
+SEARCH_RESULTS ?= $(SEARCH_DIR)/dataset_docs_public.json
+QUERY ?= What's a vllm?
 
 install:
 	uv sync
 
-run:
-	@echo "Please enter the CLI commands in order, here's a default example:"
-	@echo "INDEX:"
-	@echo "  uv run python -m src index --max_chunk_size 2000"
-	@echo "RETRIEVE:"
-	@echo "  uv run python -m src search_dataset"
-	@echo "		--dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json"
-	@echo "		--k 10"
-	@echo "		--save_directory data/output/search_results/UnansweredQuestions"
-	@echo "EVALUATE:"
-	@echo "  /moulinette evaluate_student_search_results"
-	@echo "  	data/output/search_results/UnansweredQuestions/dataset_docs_public.json"
-	@echo "  	data/datasets/AnsweredQuestions/dataset_docs_public.json"
-	@echo "  	--k 10 --max_context_length 2000""
-	@echo "ANSWER:"
-	@echo "  uv run python -m src answer_dataset"
-	@echo "		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json"
-	@echo "		--save_directory data/output/search_results_and_answer/UnansweredQuestions"
+index:
+	uv run python -m src index --max_chunk_size $(MAX_CHUNK_SIZE)
+
+search:
+	uv run python -m src search "$(QUERY)" --k $(K)
+
+answer:
+	uv run python -m src answer "$(QUERY)" --k (K)
 
 
-commands:
-	@echo "Please enter the CLI commands in order, here's a default example:"
-	@echo "INDEX:"
-	@echo "  uv run python -m src index --max_chunk_size <value>"
-	@echo "RETRIEVE:"
-	@echo "  uv run python -m src search_dataset"
-	@echo "		--dataset_path <file_path>"
-	@echo "		--k <k>"
-	@echo "		--save_directory <dir_path>"
-	@echo "EVALUATE:"
-	@echo "  /moulinette evaluate_student_search_results"
-	@echo "  	<unanswered_questions_file_path>"
-	@echo "  	<answered_questions_file_path>"
-	@echo "  	--k <k> --max_context_length <value>"
-	@echo "ANSWER:"
-	@echo "  uv run python -m src answer_dataset"
-	@echo "		--student_search_results_path <file_path>"
-	@echo "		--save_directory <dir_path>"
+search-dataset:
+	uv run python -m src search_dataset \
+		--dataset_path $(DATASET) \
+		--k $(K) \
+		--save_directory $(SEARCH_DIR)
+
+evaluate:
+	uv run python -m src evaluate \
+        --student_search_results_path $(SEARCH_RESULTS) \
+        --dataset_path $(ANSWERED_QUESTIONS)
+
+answer-dataset:
+	uv run python -m src answer_dataset \
+		--student_search_results_path $(SEARCH_RESULTS) \
+		--save_directory $(ANSWER_DIR)
+
+run: index search-dataset evaluate answer-dataset
 
 debug:
-	$(PYTHON) -m pdb -m src
+	uv run python -m pdb -m src
 
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -prune -exec rm -rf {} + 2>/dev/null || true
 
 lint:
-	$(FLAKE8) $(LINT_PATHS)
-	$(MYPY) $(LINT_PATHS) --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	uv run flake8 $(LINT_PATHS)
+	uv run mypy $(LINT_PATHS) --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
-	$(FLAKE8) $(LINT_PATHS)
-	$(MYPY) $(LINT_PATHS) --strict
+	uv run flake8 $(LINT_PATHS)
+	uv run mypy $(LINT_PATHS) --strict
 
-.PHONY: install run debug clean lint lint-strict setup
+.PHONY: install run debug clean lint lint-strict index search search-dataset answer answer-dataset evaluate
