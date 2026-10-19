@@ -49,6 +49,23 @@ def evaluate(dataset_path: str,
     results: StudentSearchResults = load_search_results(
         student_search_results_path)
     answered: list[AnsweredQuestion] = load_answered(dataset_path)
-    retrieved = r.retrieved_sources for r in results.search_results
-    expected = answered.sources
-    return {k: mean(recall_at_k(expected, retrieved, k)) for k in K_VALUES}
+    results_by_id = {
+        r.question_id: r.retrieved_sources
+        for r in results.search_results
+    }
+    # recalls = {}
+    # for k in K_VALUES:
+    #     recalls = {
+    #         k:
+    #         mean(
+    #             recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)
+    #             for q in answered)
+    #     }
+    recalls = {
+        k:
+        mean(
+            recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)
+            for q in answered)
+        for k in K_VALUES
+    }
+    return recalls
