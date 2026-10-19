@@ -22,6 +22,7 @@ Problèmes de compréhension du sujet au niveau des data Models qui nous sont im
 	Converse with a model with pipeline: https://huggingface.co/docs/transformers/conversations
 	Chat templating: https://huggingface.co/docs/transformers/chat_templating
 	llm tutorial for transformers: https://huggingface.co/docs/transformers/llm_tutorial
+	Nested list comprehension in Python: https://www.geeksforgeeks.org/python/nested-list-comprehensions-in-python/
 ## AI usage
 	doc for transformers, chunk manipulation, bm25s, basic explanation of tools
 	Used to fix an obscure error from transformers which had conflict with max_new_tokens=256 and max_length=20 cause by the default config in text-generation?

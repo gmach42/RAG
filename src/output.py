@@ -1,6 +1,6 @@
 """Manage CLI config / output"""
 
-from . import retrieval, answer_gen
+from . import retrieval, answer_gen, evaluate
 from .retrieval import Retriever
 from .answer_gen import Generator
 from .index import build_index
@@ -113,4 +113,4 @@ class CLI:
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         dataset_path = self._check_path(dataset_path, "dataset_path")
-        # TODO
+        print(evaluate.evaluate(dataset_path, student_search_results_path))

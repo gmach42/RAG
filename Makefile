@@ -20,7 +20,7 @@ search:
 	uv run python -m src search "$(QUERY)" --k $(K)
 
 answer:
-	uv run python -m src answer "$(QUERY)" --k (K)
+	uv run python -m src answer "$(QUERY)" --k $(K)
 
 
 search-dataset:

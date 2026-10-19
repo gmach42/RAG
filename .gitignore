@@ -6,3 +6,5 @@ __pycache__/
 .vscode/
 data/output/
 data/processed/
+moulinette
+.mypy_cache/
