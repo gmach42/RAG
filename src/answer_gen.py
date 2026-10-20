@@ -18,20 +18,17 @@ class Generator:
         self.pipe = pipeline(task="text-generation",
                              model=model_name,
                              device_map="auto")
-        # The pipeline copies the legacy max_length=20 into its config,
-        # which clashes with max_new_tokens on every call.
-        self.pipe.generation_config.max_length = None
-        # Set generation params on the config rather than at call time:
-        # passing both a config and kwargs is deprecated in transformers.
-        self.pipe.generation_config.max_new_tokens = 256
-        # Greedy decoding: same answer on every run, less made-up content.
-        # Qwen's sampling params are cleared so they don't trigger warnings.
-        for config in (self.pipe.generation_config,
-                       self.pipe.model.generation_config):
-            config.do_sample = False
-            config.temperature = None
-            config.top_p = None
-            config.top_k = None
+        # Start from Qwen's own config and give it to the pipeline, so
+        # that generate() no longer merges two conflicting configs.
+        # Greedy decoding: same answer on every run. The sampling params
+        # are cleared since they are unused without it.
+        config = self.pipe.model.generation_config
+        config.update(max_new_tokens=256,
+                      do_sample=False,
+                      temperature=None,
+                      top_p=None,
+                      top_k=None)
+        self.pipe.generation_config = config
 
     def answer(self, question: str, sources: list[MinimalSource]) -> str:
         """Build the prompt from the sources and generate the answer"""
