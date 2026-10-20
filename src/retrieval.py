@@ -1,5 +1,6 @@
-"""Once the source (vllm) is indexed (verified it is the case), research
-the chunks (minimalSource) which respond the best to the query (prompt)
+"""Search the BM25 index for the chunks that best answer a query.
+
+The index must have been built first (checked by load_index).
 """
 
 from tqdm import tqdm
@@ -11,15 +12,16 @@ from .data_models import (MinimalSource, UnansweredQuestion, RagDataset,
 
 
 class Retriever:
-    """Class used to load the index ONCE and then operate on it"""
+    """Load the index ONCE and then search it."""
 
     def __init__(self, index_dir: str) -> None:
-        """Load the BM25 index (index + chunks)"""
+        """Load the BM25 index (index + chunks)."""
         self.bm25, self.chunks = load_index(index_dir)
 
     def search(self, query: str, top_k: int) -> list[MinimalSource]:
-        """From a query and a given top_k, search for the top_k chunks depending of their bm25s score,
-        Returns a list of MinimalSource
+        """Return the top_k chunks for the query, best BM25 score first.
+
+        Chunks with a null score (no word in common) are left out.
         """
         k = min(top_k, len(self.chunks))
         if k <= 0 or not query.strip():
@@ -38,10 +40,7 @@ class Retriever:
 
 
 def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
-    """Load the questions of a RagDataset JSON file,
-
-    Returns a list of UnansweredQuestion
-    """
+    """Load the questions of a RagDataset JSON file."""
     path = Path(dataset_path)
     if not path.is_file():
         raise FileNotFoundError(f"Dataset {dataset_path!r} does not exist.")
@@ -55,9 +54,7 @@ def load_questions(dataset_path: str) -> list[UnansweredQuestion]:
 
 def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
                      top_k: int) -> StudentSearchResults:
-    """Retrieve the top_k chunks for each question using the search function of our Retriever,
-    returns StudentSearchResults
-    """
+    """Retrieve the top_k chunks for each question of the dataset."""
     results = [
         MinimalSearchResults(question_id=q.question_id,
                              question=q.question,
@@ -70,7 +67,7 @@ def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
 
 def save_search_results(search_results: StudentSearchResults,
                         dataset_path: str, save_directory: str) -> Path:
-    """Save the results under save_directory, named after the dataset"""
+    """Save the results under save_directory, named after the dataset."""
     save_dir = Path(save_directory)
     save_dir.mkdir(parents=True, exist_ok=True)
     output_path = save_dir / Path(dataset_path).name
@@ -81,15 +78,12 @@ def save_search_results(search_results: StudentSearchResults,
 
 def search_dataset(index_dir: str, dataset_path: str, top_k: int,
                    save_directory: str) -> Path:
-    """Main function of retrieval.py:
+    """Search every question of a dataset and save the results.
 
-    For a given RagDataset (list of UnansweredQuestion),
-    load them and search the best chunks reponding to them thanks to Retriever
-
-    Returns the path of the results of theses search
+    Returns the path of the saved StudentSearchResults file.
     """
     if top_k <= 0:
-        raise ValueError(f"k must be a positve integer, got {top_k}.")
+        raise ValueError(f"k must be a positive integer, got {top_k}.")
     questions = load_questions(dataset_path)
     retriever = Retriever(index_dir)
     results = search_questions(retriever, questions, top_k)

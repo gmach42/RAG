@@ -1,5 +1,4 @@
-"""Module for generating answers based on retrieved chunks.
-"""
+"""Generate answers with Qwen from the retrieved chunks."""
 
 from transformers import pipeline
 from .data_models import (MinimalAnswer, MinimalSource, StudentSearchResults,
@@ -9,15 +8,23 @@ from pydantic import ValidationError
 from tqdm import tqdm
 
 REFUSAL: str = "I don't know based on the vLLM sources."
+# Token budget of the sources in the prompt. Qwen3-0.6B reads 40960
+# tokens at most, and a long context also costs memory and time.
+# k=10 chunks of 2000 characters take about 5000 tokens.
+MAX_CONTEXT_TOKENS: int = 8000
 
 
 class Generator:
+    """Qwen text-generation pipeline, loaded once and reused."""
 
     def __init__(self, model_name: str = "Qwen/Qwen3-0.6B") -> None:
-        """Load the LLM pipeline one"""
+        """Load the LLM pipeline once."""
         self.pipe = pipeline(task="text-generation",
                              model=model_name,
                              device_map="auto")
+        if self.pipe.tokenizer is None:
+            raise RuntimeError(f"No tokenizer found for {model_name!r}")
+        self.tokenizer = self.pipe.tokenizer
         # Start from Qwen's own config and give it to the pipeline, so
         # that generate() no longer merges two conflicting configs.
         # Greedy decoding: same answer on every run. The sampling params
@@ -31,10 +38,16 @@ class Generator:
         self.pipe.generation_config = config
 
     def answer(self, question: str, sources: list[MinimalSource]) -> str:
-        """Build the prompt from the sources and generate the answer"""
+        """Build the prompt from the sources and generate the answer."""
         context: str = ""
+        used_tokens = 0
         for i, src in enumerate(sources, start=1):
             entry = f"[{i}] {src.file_path}\n{src.text}\n\n"
+            # Sources are sorted best first: drop the last ones if the
+            # context would not fit in the token budget.
+            used_tokens += len(self.tokenizer.encode(entry))
+            if used_tokens > MAX_CONTEXT_TOKENS:
+                break
             context += entry
         # A small model follows rules better when they come right after
         # the sources, close to where it starts writing.
@@ -70,7 +83,7 @@ class Generator:
 
 def load_search_results(
         student_search_results_path: str) -> StudentSearchResults:
-    """Load the results (questions + chunks from src corresponding)"""
+    """Load a StudentSearchResults file (questions + retrieved chunks)."""
     path = Path(student_search_results_path)
     if not path.is_file():
         raise FileNotFoundError(
@@ -88,6 +101,7 @@ def load_search_results(
 def answer_questions(
         generator: Generator,
         results: StudentSearchResults) -> StudentSearchResultsAndAnswer:
+    """Generate an answer for each question of the search results."""
     answers: list[MinimalAnswer] = []
     for result in tqdm(results.search_results, desc="Answering"):
         generated: str = generator.answer(result.question,
@@ -105,6 +119,7 @@ def answer_questions(
 def save_answers(answer_results: StudentSearchResultsAndAnswer,
                  student_search_results_path: str,
                  save_directory: str) -> Path:
+    """Save the answers under save_directory, named after the input file."""
     save_dir = Path(save_directory)
     save_dir.mkdir(parents=True, exist_ok=True)
     output_path = save_dir / Path(student_search_results_path).name
@@ -115,6 +130,7 @@ def save_answers(answer_results: StudentSearchResultsAndAnswer,
 
 def answer_dataset(student_search_results_path: str,
                    save_directory: str) -> Path:
+    """Answer every question of a search results file and save them."""
     results = load_search_results(student_search_results_path)
     generator = Generator()
     answers = answer_questions(generator, results)

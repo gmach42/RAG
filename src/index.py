@@ -1,5 +1,7 @@
-import json
+"""Chunk the corpus and build the BM25 index under data/processed/."""
+
 from pathlib import Path
+import json
 
 import bm25s
 from bm25s.tokenization import Tokenized
@@ -16,13 +18,13 @@ BM25_PARAMS_FILENAME = "params.index.json"  # written by bm25s.BM25.save
 
 
 def list_corpus_files(raw_dir: str) -> list[Path]:
-    """Goes through raw_dir recursively and return a list of files to index"""
+    """Go through raw_dir recursively and return the files to index."""
     return sorted(f for f in Path(raw_dir).rglob("*")
                   if f.is_file() and f.suffix in CORPUS_SUFFIXES)
 
 
 def read_file(path: Path) -> str | None:
-    """Read a file, return None if not readable (e.g. binary)"""
+    """Read a file, return None if not readable (e.g. binary)."""
     try:
         return path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
@@ -38,7 +40,7 @@ def chunk_fix_size(text: str,
                    file_path: str,
                    max_chunk_size: int,
                    offset: int = 0) -> list[MinimalSource]:
-    """Chunk text following only the max_chunk_size parameter
+    """Chunk text following only the max_chunk_size parameter.
 
     offset is the position of text in the original file, so that the
     chunk indices stay absolute.
@@ -57,13 +59,20 @@ def chunk_fix_size(text: str,
     return chunks
 
 
+def path_words(file_path: str) -> str:
+    """Split a file path into words: 'fused_moe/x.py' -> 'fused moe x py'."""
+    for sep in "/_.-":
+        file_path = file_path.replace(sep, " ")
+    return file_path
+
+
 def is_header(line: str) -> bool:
-    """Check if a line is a markdown header"""
+    """Check if a line is a markdown header."""
     return line.lstrip().startswith("#")
 
 
 def section_starts(text: str) -> list[int]:
-    """Return the starting indices of all sections in the text
+    """Return the starting indices of all sections in the text.
 
     The first section always starts at 0 (text before the first header).
     Ignores headers inside code blocks marked by ```.
@@ -86,7 +95,7 @@ def section_starts(text: str) -> list[int]:
 
 def merge_small_sections(starts: list[int], text_length: int,
                          max_chunk_size: int) -> list[tuple[int, int]]:
-    """Merge consecutive sections while the result is <= max_chunk_size"""
+    """Merge consecutive sections while the result is <= max_chunk_size."""
     merged: list[tuple[int, int]] = []
     ends = starts[1:] + [text_length]
     for start, end in zip(starts, ends):
@@ -101,7 +110,7 @@ def merge_small_sections(starts: list[int], text_length: int,
 
 def text_to_minimalsource(text: str, file_path: str, start: int, end: int,
                           max_chunk_size: int) -> list[MinimalSource]:
-    """Convert a section of text defined by start and end into chunks"""
+    """Convert a section of text defined by start and end into chunks."""
     section = text[start:end]
     if not section.strip():
         return []
@@ -119,7 +128,7 @@ def chunk_sections(
         text: str,
         file_path: str,
         max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> list[MinimalSource]:
-    """Chunk a .md/.txt file according to titles (# ##)"""
+    """Chunk a .md/.txt file according to titles (# ##)."""
     sections = merge_small_sections(section_starts(text), len(text),
                                     max_chunk_size)
     chunks: list[MinimalSource] = []
@@ -131,7 +140,7 @@ def chunk_sections(
 
 def chunk_file(path: Path, text: str,
                max_chunk_size: int) -> list[MinimalSource]:
-    """Pick the chunking strategy according to the file extension"""
+    """Pick the chunking strategy according to the file extension."""
     if path.suffix == ".py":
         return chunk_fix_size(text, str(path), max_chunk_size)
     return chunk_sections(text, str(path), max_chunk_size)
@@ -142,7 +151,7 @@ def chunk_file(path: Path, text: str,
 
 def tokenize(texts: list[str],
              show_progress: bool = False) -> list[list[str]] | Tokenized:
-    """Transform texts into tokens for BM25, also used in retrieval.py"""
+    """Transform texts into tokens for BM25, also used in retrieval.py."""
     return bm25s.tokenize(texts, stopwords="en", show_progress=show_progress)
 
 
@@ -168,8 +177,11 @@ def build_index(raw_dir: str,
         chunks.extend(chunk_file(file, text, max_chunk_size))
     if not chunks:
         raise ValueError(f"No chunk to index in {raw_dir!r}")
+    texts: list[str] = []
+    for c in chunks:
+        texts.append(f"{path_words(c.file_path)} {c.text}")
     retriever = bm25s.BM25()
-    retriever.index(tokenize([c.text for c in chunks], show_progress=True))
+    retriever.index(tokenize(texts, show_progress=True))
     save_index(retriever, chunks, index_dir)
 
 
@@ -178,17 +190,17 @@ def build_index(raw_dir: str,
 
 def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
                index_dir: str) -> None:
-    """Save BM25 index and chunks metadatas (json) in index_dir"""
+    """Save the BM25 index and the chunks (json) in index_dir."""
     out = Path(index_dir)
     out.mkdir(parents=True, exist_ok=True)
     retriever.save(str(out))
     data = [chunk.model_dump() for chunk in chunks]  # get a list of dict
-    # using the function write_text of pathlib to replace os -> json.dumps -> open("w")
+    # pathlib write_text replaces open("w") + json.dump
     (out / CHUNKS_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
 
 def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
-    """Reload index + chunks. Used by retrieval.py
+    """Reload the index and its chunks, used by retrieval.py.
 
     The i-th document of the BM25 index is chunks[i].
     """
@@ -208,9 +220,8 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
             chunks.append(source)
     # JSONDecodeError and pydantic's ValidationError are ValueErrors
     except (OSError, ValueError, KeyError, TypeError) as e:
-        raise ValueError(
-            f"Index in {index_dir!r} is corrupted, "
-            f"run the index command again ({e})") from e
+        raise ValueError(f"Index in {index_dir!r} is corrupted, "
+                         f"run the index command again ({e})") from e
     # Could also have used :
     # chunks = TypeAdapter(list[MinimalSource]).validate_json(raw)
     return retriever, chunks

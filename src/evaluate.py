@@ -1,6 +1,6 @@
-# student_search_results_path <path> -dataset_path <path>
+"""Compute our own recall@k against a ground-truth dataset."""
 
-from .data_models import RagDataset, StudentSearchResults, MinimalSearchResults, AnsweredQuestion, MinimalSource
+from .data_models import StudentSearchResults, AnsweredQuestion, MinimalSource
 from .answer_gen import load_search_results
 from .retrieval import load_questions
 from statistics import mean
@@ -9,6 +9,7 @@ K_VALUES: list[int] = [1, 3, 5, 10]
 
 
 def load_answered(dataset_path: str) -> list[AnsweredQuestion]:
+    """Load the questions of a ground-truth dataset, with their sources."""
     questions = load_questions(dataset_path)
     answered = [q for q in questions if isinstance(q, AnsweredQuestion)]
     if not answered:
@@ -26,6 +27,7 @@ def source_found(expected: MinimalSource, retrieved: MinimalSource) -> bool:
 
 def recall_at_k(expected: list[MinimalSource], retrieved: list[MinimalSource],
                 k: int) -> float:
+    """Return the fraction of expected sources found in the top-k."""
     # check div 0
     if not expected:
         return 0.0
@@ -41,11 +43,9 @@ def recall_at_k(expected: list[MinimalSource], retrieved: list[MinimalSource],
 
 def evaluate(dataset_path: str,
              student_search_results_path: str) -> tuple[dict[int, float], int]:
-    # Load rag_dataset and student search results
-    # Associate questions by question_id
-    # For each question calculate the proportion of sources expected found in the k top result
-    # Calculate an average for all questions for k = 1,3,5 and 10, display it same format as moulinette
-    # r = results.search_results: list[MinimalSearchResults], r.retrieved_sources: list[MinimalSource]
+    """Return the mean recall@k for each k, and the number of questions."""
+    # For each question, compute the proportion of expected sources found
+    # in the top-k results, then average over all questions for each k.
     results: StudentSearchResults = load_search_results(
         student_search_results_path)
     answered: list[AnsweredQuestion] = load_answered(dataset_path)
@@ -55,7 +55,7 @@ def evaluate(dataset_path: str,
         for r in results.search_results
     }
     nb_entries = len(answered)
-    recalls = {}
+    recalls: dict[int, float] = {}
     for k in K_VALUES:
         recalls[k] = mean(
             recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)

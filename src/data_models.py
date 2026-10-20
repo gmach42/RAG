@@ -1,3 +1,5 @@
+"""Pydantic models exchanged between the stages of the RAG."""
+
 from pydantic import BaseModel, Field, model_validator
 import uuid
 from typing import Self
@@ -30,6 +32,7 @@ class MinimalSource(BaseModel):
 
     @model_validator(mode="after")
     def check_range(self) -> Self:
+        """Check that the character range is valid and matches the text."""
         first = self.first_character_index
         last = self.last_character_index
         if not first <= last:
