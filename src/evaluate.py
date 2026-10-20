@@ -40,7 +40,7 @@ def recall_at_k(expected: list[MinimalSource], retrieved: list[MinimalSource],
 
 
 def evaluate(dataset_path: str,
-             student_search_results_path: str) -> dict[int, float]:
+             student_search_results_path: str) -> tuple[dict[int, float], int]:
     # Load rag_dataset and student search results
     # Associate questions by question_id
     # For each question calculate the proportion of sources expected found in the k top result
@@ -54,9 +54,10 @@ def evaluate(dataset_path: str,
         r.question_id: r.retrieved_sources
         for r in results.search_results
     }
+    nb_entries = len(answered)
     recalls = {}
     for k in K_VALUES:
         recalls[k] = mean(
             recall_at_k(q.sources, results_by_id.get(q.question_id, []), k)
             for q in answered)
-    return recalls
+    return recalls, nb_entries

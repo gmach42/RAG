@@ -93,9 +93,8 @@ class CLI:
         retriever = Retriever(index_dir)
         srcs = retriever.search(q, top_k)
         generator = Generator()
-        print(
-            f"The answer for the query '{q}' is: \n{generator.answer(q, srcs)}\n"
-        )
+        print(f"The answer for the query '{q}' is: "
+              f"\n{generator.answer(q, srcs)}\n")
 
     def answer_dataset(
             self,
@@ -113,4 +112,11 @@ class CLI:
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         dataset_path = self._check_path(dataset_path, "dataset_path")
-        print(evaluate.evaluate(dataset_path, student_search_results_path))
+        recalls, q = evaluate.evaluate(dataset_path,
+                                       student_search_results_path)
+        print("\nEvaluation Results:")
+        print("===================")
+        print(f"Questions evaluated: {q}")
+        print(
+            "\n".join(f"Recall@{k}: {r:.2f} ({r:.1%})"
+                      for k, r in recalls.items()), "\n")
