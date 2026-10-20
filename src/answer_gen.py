@@ -8,10 +8,6 @@ from pydantic import ValidationError
 from tqdm import tqdm
 
 REFUSAL: str = "I don't know based on the vLLM sources."
-# Token budget of the sources in the prompt. Qwen3-0.6B reads 40960
-# tokens at most, and a long context also costs memory and time.
-# k=10 chunks of 2000 characters take about 5000 tokens.
-MAX_CONTEXT_TOKENS: int = 8000
 
 
 class Generator:
@@ -22,9 +18,6 @@ class Generator:
         self.pipe = pipeline(task="text-generation",
                              model=model_name,
                              device_map="auto")
-        if self.pipe.tokenizer is None:
-            raise RuntimeError(f"No tokenizer found for {model_name!r}")
-        self.tokenizer = self.pipe.tokenizer
         # Start from Qwen's own config and give it to the pipeline, so
         # that generate() no longer merges two conflicting configs.
         # Greedy decoding: same answer on every run. The sampling params
@@ -40,14 +33,8 @@ class Generator:
     def answer(self, question: str, sources: list[MinimalSource]) -> str:
         """Build the prompt from the sources and generate the answer."""
         context: str = ""
-        used_tokens = 0
         for i, src in enumerate(sources, start=1):
             entry = f"[{i}] {src.file_path}\n{src.text}\n\n"
-            # Sources are sorted best first: drop the last ones if the
-            # context would not fit in the token budget.
-            used_tokens += len(self.tokenizer.encode(entry))
-            if used_tokens > MAX_CONTEXT_TOKENS:
-                break
             context += entry
         # A small model follows rules better when they come right after
         # the sources, close to where it starts writing.
