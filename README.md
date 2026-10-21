@@ -190,34 +190,85 @@ numbers (89 % vs 87 % recall@5 on docs).
 
 # Example usage
 
-```bash
-$ uv run python -m src index --max_chunk_size 2000
-Indexation complete, indices saved under data/processed/
+Titles and results are colored and centered in the terminal; they are shown
+here without colors and left-aligned.
 
-$ uv run python -m src search "How do I enable LoRA adapters?" --k 1
-{
-  "file_path": "data/raw/vllm-0.10.1/docs/features/lora.md",
-  "first_character_index": ...,
-  ...
-}
+## With make
+
+```text
+$ make run
+Parameters
+  MAX_CHUNK_SIZE       (code default)
+  K                    (code default)
+  DATASET              data/datasets/UnansweredQuestions/dataset_docs_public.json
+  ANSWERED_QUESTIONS   data/datasets/AnsweredQuestions/dataset_docs_public.json
+  SEARCH_DIR           (code default)
+  SEARCH_RESULTS       data/output/search_results/dataset_docs_public.json
+  ANSWER_DIR           (code default)
+
+=== INDEXATION ===
+BM25S Compute Scores: 100%|██████████| 11157/11157 [...]
+Indexation complete, indexed 11157 under data/processed/
+
+=== SEARCH_DATASET ===
+Searching: 100%|██████████| 100/100 [...]
+Saved student_search_results to data/output/search_results/dataset_docs_public.json
+
+=== EVALUATE ===
+Evaluation Results:
+===================
+Questions evaluated: 100
+Recall@1: 0.61 (61.0%)
+Recall@3: 0.83 (83.0%)
+Recall@5: 0.89 (89.0%)
+Recall@10: 0.92 (92.0%)
+
+=== ANSWER_DATASET ===
+Answering: 100%|██████████| 100/100 [03:02<00:00, 1.83s/it]
+Saved student_search_results_and_answer to data/output/search_results_and_answer/dataset_docs_public.json
+```
+
+## With the CLI
+
+```text
+$ uv run python -m src index --max_chunk_size 2000
+=== INDEXATION ===
+Indexation complete, indexed 11157 under data/processed/
+
+$ uv run python -m src search "How do I enable LoRA adapters?" --k 3
+=== SEARCH ===
+data/raw/vllm-0.10.1/docs/features/lora.md [14472:15148]
+data/raw/vllm-0.10.1/docs/features/lora.md [4075:4695]
+data/raw/vllm-0.10.1/docs/features/lora.md [0:2000]
 
 $ uv run python -m src search_dataset \
     --dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json \
     --k 10 --save_directory data/output/search_results/UnansweredQuestions
+=== SEARCH_DATASET ===
 Saved student_search_results to data/output/search_results/UnansweredQuestions/dataset_docs_public.json
 
 $ uv run python -m src evaluate \
     --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
     --dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
+=== EVALUATE ===
+Evaluation Results:
+===================
 Questions evaluated: 100
 Recall@1: 0.61 (61.0%)
 ...
 
 $ uv run python -m src answer "What HTTP endpoint is used to dynamically load a LoRA adapter?"
-The HTTP endpoint used to dynamically load a LoRA adapter is `/v1/load_lora_adapter`. ...
+=== ANSWER ===
+The answer for the query 'What HTTP endpoint is used to dynamically load a LoRA adapter?' is:
+The HTTP endpoint used to dynamically load a LoRA adapter is `/v1/load_lora_adapter`. [...] [1]
 
 $ uv run python -m src answer "What is the recipe of the chocolate cake?"
+=== ANSWER ===
+The answer for the query 'What is the recipe of the chocolate cake?' is:
 I don't know based on the vLLM sources.
+
+$ uv run python -m src search ""
+Error: Query must not be empty
 ```
 
 # Resources
