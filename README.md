@@ -242,6 +242,7 @@ I don't know based on the vLLM sources.
 - Chat templates: https://huggingface.co/docs/transformers/chat_templating
 - LLM generation tutorial: https://huggingface.co/docs/transformers/llm_tutorial
 - Nested list comprehensions: https://www.geeksforgeeks.org/python/nested-list-comprehensions-in-python/
+- printf command in Linux / bash for Makefile formatting: https://linuxcapable.com/printf-command-in-linux/
 
 ## AI usage
 

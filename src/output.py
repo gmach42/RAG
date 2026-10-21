@@ -14,13 +14,13 @@ DEFAULT_SEARCH_SAVE_DIRECTORY: str = "data/output/search_results/"
 DEFAULT_ANSWER_SAVE_DIRECTORY: str = "data/output/search_results_and_answer/"
 DEFAULT_MAX_CHUNK_SIZE: int = 2000
 
-RED = "\x1b[31m"
-GREEN = "\x1b[32m"
-BLUE = "\x1b[34m"
-YELLOW = "\x1b[33m"
-WHITE = "\x1b[0m"
+# Colors / Font in terminal
+RED = "\033[31m"
+GREEN = "\033[32m"
+BLUE = "\033[34m"
+YELLOW = "\033[33m"
 BOLD = "\033[1m"
-RESET = "\033[22m"
+RESET = "\033[0m"
 
 
 class CLI:
@@ -62,30 +62,32 @@ class CLI:
         return res
 
     @staticmethod
-    def _print_centered(text: str, color: str = "", bold: str = "") -> None:
+    def _print_centered(text: str, color: str = "") -> None:
         """Print text centered in terminal, optionally colored."""
         width = shutil.get_terminal_size().columns
-        print(f"{bold}{color}{text.center(width)}{RESET}{WHITE}")
+        print()
+        for line in text.splitlines():
+            print(f"{color}{line.center(width)}{RESET}")
 
     def index(self,
               max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE,
               raw_dir: str = DEFAULT_RAW_DIR,
               index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """Chunk raw_dir and save the BM25 index under index_dir."""
-        self._print_centered("=== INDEXATION ===", RED, BOLD)
+        self._print_centered("=== INDEXATION ===\n\n", RED + BOLD)
         max_chunk_size = self._check_max_chunk_size(max_chunk_size)
         raw_dir = self._check_path(raw_dir, "raw_dir")
         index_dir = self._check_path(index_dir, "index_dir")
-        build_index(raw_dir, index_dir, max_chunk_size)
+        nb_chunks = build_index(raw_dir, index_dir, max_chunk_size)
         self._print_centered(
-            f"Indexation complete, indices saved under {index_dir}\n", RED)
+            f"Indexation complete, indexed {nb_chunks} under {index_dir}", RED)
 
     def search(self,
                query: str,
                k: int = 10,
                index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """Print the top_k sources for a single query."""
-        self._print_centered("=== SEARCH ===", YELLOW, BOLD)
+        self._print_centered("=== SEARCH ===\n\n", YELLOW + BOLD)
         q = self._check_query(query)
         top_k = self._check_k(k)
         retriever = Retriever(index_dir)
@@ -93,7 +95,11 @@ class CLI:
         if not sources:
             print("No source found for this query.")
         for source in sources:
-            print(source.model_dump_json(indent=2))
+            src = source.model_dump(mode="json", exclude={"text"})
+            print(
+                f"{YELLOW}{src['file_path']} [{src['first_character_index']}:"
+                f"{src['last_character_index']}]")
+        print()
 
     def search_dataset(self,
                        dataset_path: str,
@@ -101,7 +107,7 @@ class CLI:
                        save_directory: str = DEFAULT_SEARCH_SAVE_DIRECTORY,
                        index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """Search every question of a dataset and save the results."""
-        self._print_centered("=== SEARCH_DATASET ===", YELLOW, BOLD)
+        self._print_centered("=== SEARCH_DATASET ===\n\n", YELLOW + BOLD)
         top_k = self._check_k(k)
         dataset_path = self._check_path(dataset_path, "dataset_path")
         save_directory = self._check_path(save_directory, "save_directory")
@@ -116,22 +122,21 @@ class CLI:
                k: int = 10,
                index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """Print the answer for a single query."""
-        self._print_centered("=== ANSWER ===", GREEN, BOLD)
+        self._print_centered("=== ANSWER ===\n\n", GREEN + BOLD)
         q = self._check_query(query)
         top_k = self._check_k(k)
         retriever = Retriever(index_dir)
         srcs = retriever.search(q, top_k)
         generator = Generator()
-        self._print_centered(
-            f"The answer for the query '{q}' is: "
-            f"\n{generator.answer(q, srcs)}\n", GREEN)
+        print(f"{GREEN}\nThe answer for the query '{q}' is: "
+              f"\n{generator.answer(q, srcs)}\n")
 
     def answer_dataset(
             self,
             student_search_results_path: str,
             save_directory: str = DEFAULT_ANSWER_SAVE_DIRECTORY) -> None:
         """Answer every question of a search results file and save them."""
-        self._print_centered("=== ANSWER_DATASET ===", GREEN, BOLD)
+        self._print_centered("=== ANSWER_DATASET ===\n\n", GREEN + BOLD)
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         save_directory = self._check_path(save_directory, "save_directory")
@@ -143,15 +148,14 @@ class CLI:
     def evaluate(self, student_search_results_path: str,
                  dataset_path: str) -> None:
         """Print our recall@k against a ground-truth dataset."""
-        self._print_centered("=== EVALUATE ===", BLUE, BOLD)
+        self._print_centered("=== EVALUATE ===", BLUE + BOLD)
         student_search_results_path = self._check_path(
             student_search_results_path, "student_search_results_path")
         dataset_path = self._check_path(dataset_path, "dataset_path")
         recalls, q = evaluate.evaluate(dataset_path,
                                        student_search_results_path)
-        print(BLUE, "\nEvaluation Results:")
-        print("===================")
-        print(f"Questions evaluated: {q}")
-        print(
-            "\n".join(f"Recall@{k}: {r:.2f} ({r:.1%})"
-                      for k, r in recalls.items()), "\n", WHITE)
+        results = "\n".join(f"Recall@{k}: {r:.2f} ({r:.1%})"
+                            for k, r in recalls.items())
+        text = ("Evaluation Results:\n===================\n"
+                f"Questions evaluated: {q}\n" + results)
+        self._print_centered(text, BLUE)

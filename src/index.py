@@ -160,7 +160,7 @@ def tokenize(texts: list[str],
 
 def build_index(raw_dir: str,
                 index_dir: str,
-                max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> None:
+                max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> int:
     """Main function to build the BM25 index from raw text files.
 
     Stages:
@@ -184,6 +184,7 @@ def build_index(raw_dir: str,
     retriever = bm25s.BM25()
     retriever.index(tokenize(texts, show_progress=True))
     save_index(retriever, chunks, index_dir)
+    return len(chunks)
 
 
 # === Save and Load Index ===
