@@ -85,7 +85,9 @@ def answer_questions(
         results: StudentSearchResults) -> StudentSearchResultsAndAnswer:
     """Generate an answer for each question of the search results."""
     answers: list[MinimalAnswer] = []
-    for result in tqdm(results.search_results, desc="Answering"):
+    for result in tqdm(results.search_results,
+                       desc="Answering",
+                       colour="green"):
         generated: str = generator.answer(result.question,
                                           result.retrieved_sources)
         answer = MinimalAnswer(

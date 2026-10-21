@@ -60,7 +60,7 @@ def search_questions(retriever: Retriever, questions: list[UnansweredQuestion],
                              question=q.question,
                              retrieved_sources=retriever.search(
                                  q.question, top_k))
-        for q in tqdm(questions, desc="Searching")
+        for q in tqdm(questions, desc="Searching", colour="blue")
     ]
     return StudentSearchResults(search_results=results, k=top_k)
 

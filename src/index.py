@@ -14,7 +14,7 @@ from .data_models import MinimalSource
 
 CORPUS_SUFFIXES = {".md", ".txt", ".py"}
 CHUNKS_FILENAME = "chunks.json"
-BM25_PARAMS_FILENAME = "params.index.json"  # written by bm25s.BM25.save
+BM25_PARAMS_FILENAME = "params.index.json"
 
 
 def list_corpus_files(raw_dir: str) -> list[Path]:
@@ -170,7 +170,8 @@ def build_index(raw_dir: str,
     4. Save the index and chunk metadata.
     """
     chunks: list[MinimalSource] = []
-    for file in tqdm(list_corpus_files(raw_dir), desc="Chunking"):
+    for file in tqdm(list_corpus_files(raw_dir), desc="Chunking",
+                     colour="red"):
         text = read_file(file)
         if text is None:
             continue
@@ -204,8 +205,6 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
 
     The i-th document of the BM25 index is chunks[i].
     """
-    # Check the files themselves: an existing but empty directory
-    # would otherwise make bm25s fail with a raw [Errno 2].
     required = (BM25_PARAMS_FILENAME, CHUNKS_FILENAME)
     if not all((Path(index_dir) / name).is_file() for name in required):
         raise FileNotFoundError(
@@ -218,10 +217,7 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
         for data in list_of_dicts:
             source = MinimalSource(**data)
             chunks.append(source)
-    # JSONDecodeError and pydantic's ValidationError are ValueErrors
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise ValueError(f"Index in {index_dir!r} is corrupted, "
                          f"run the index command again ({e})") from e
-    # Could also have used :
-    # chunks = TypeAdapter(list[MinimalSource]).validate_json(raw)
     return retriever, chunks
