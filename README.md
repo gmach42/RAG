@@ -198,21 +198,23 @@ here without colors and left-aligned.
 ```text
 $ make run
 Parameters
-  MAX_CHUNK_SIZE       (code default)
-  K                    (code default)
+  MAX_CHUNK_SIZE       2000
+  K                    10
+  SCOPE                UnansweredQuestions
+  DATASET_FILE         dataset_docs_public.json
   DATASET              data/datasets/UnansweredQuestions/dataset_docs_public.json
   ANSWERED_QUESTIONS   data/datasets/AnsweredQuestions/dataset_docs_public.json
-  SEARCH_DIR           (code default)
-  SEARCH_RESULTS       data/output/search_results/dataset_docs_public.json
-  ANSWER_DIR           (code default)
+  SEARCH_SAVE_DIR      data/output/search_results/UnansweredQuestions
+  SEARCH_RESULTS       data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+  ANSWER_SAVE_DIR      data/output/search_results_and_answer/UnansweredQuestions
 
 === INDEXATION ===
 BM25S Compute Scores: 100%|██████████| 11157/11157 [...]
-Indexation complete, indexed 11157 under data/processed/
+Indexation complete, indexed 11157 chunks under data/processed/
 
 === SEARCH_DATASET ===
 Searching: 100%|██████████| 100/100 [...]
-Saved student_search_results to data/output/search_results/dataset_docs_public.json
+Saved student_search_results to data/output/search_results/UnansweredQuestions/dataset_docs_public.json
 
 === EVALUATE ===
 Evaluation Results:
@@ -225,7 +227,7 @@ Recall@10: 0.92 (92.0%)
 
 === ANSWER_DATASET ===
 Answering: 100%|██████████| 100/100 [03:02<00:00, 1.83s/it]
-Saved student_search_results_and_answer to data/output/search_results_and_answer/dataset_docs_public.json
+Saved student_search_results_and_answer to data/output/search_results_and_answer/UnansweredQuestions/dataset_docs_public.json
 ```
 
 ## With the CLI
@@ -233,7 +235,7 @@ Saved student_search_results_and_answer to data/output/search_results_and_answer
 ```text
 $ uv run python -m src index --max_chunk_size 2000
 === INDEXATION ===
-Indexation complete, indexed 11157 under data/processed/
+Indexation complete, indexed 11157 chunks under data/processed/
 
 $ uv run python -m src search "How do I enable LoRA adapters?" --k 3
 === SEARCH ===

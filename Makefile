@@ -3,11 +3,13 @@ LINT_PATHS := src
 # Overridable parameters:
 MAX_CHUNK_SIZE ?= 2000
 K ?= 10
-DATASET ?= data/datasets/UnansweredQuestions/dataset_docs_public.json
-ANSWERED_QUESTIONS ?= data/datasets/AnsweredQuestions/dataset_docs_public.json
-SEARCH_DIR ?= data/output/search_results/UnansweredQuestions
-ANSWER_DIR ?= data/output/search_results_and_answer/UnansweredQuestions
-SEARCH_RESULTS ?= $(SEARCH_DIR)/dataset_docs_public.json
+SCOPE ?= UnansweredQuestions
+DATASET_FILE ?= dataset_docs_public.json
+DATASET ?= data/datasets/$(SCOPE)/$(DATASET_FILE)
+ANSWERED_QUESTIONS ?= data/datasets/AnsweredQuestions/$(DATASET_FILE)
+SEARCH_SAVE_DIR ?= data/output/search_results/$(SCOPE)
+ANSWER_SAVE_DIR ?= data/output/search_results_and_answer/$(SCOPE)
+SEARCH_RESULTS ?= $(SEARCH_SAVE_DIR)/$(DATASET_FILE)
 QUERY ?= How to configure the OpenAI server?
 
 # Colors:
@@ -38,7 +40,7 @@ search-dataset:
 	$(Q)uv run python -m src search_dataset \
 		--dataset_path $(DATASET) \
 		--k $(K) \
-		--save_directory $(SEARCH_DIR)
+		--save_directory $(SEARCH_SAVE_DIR)
 
 evaluate:
 	$(Q)uv run python -m src evaluate \
@@ -48,7 +50,7 @@ evaluate:
 answer-dataset:
 	$(Q)uv run python -m src answer_dataset \
 		--student_search_results_path $(SEARCH_RESULTS) \
-		--save_directory $(ANSWER_DIR)
+		--save_directory $(ANSWER_SAVE_DIR)
 
 run: Q := @
 run: params index search-dataset evaluate answer-dataset
@@ -57,11 +59,13 @@ params:
 	@printf "$(BOLD)Parameters$(RESET)\n"
 	@printf "  %-20s %s\n" "MAX_CHUNK_SIZE" "$(MAX_CHUNK_SIZE)"
 	@printf "  %-20s %s\n" "K" "$(K)"
+	@printf "  %-20s %s\n" "SCOPE" "$(SCOPE)"
+	@printf "  %-20s %s\n" "DATASET_FILE" "$(DATASET_FILE)"
 	@printf "  %-20s %s\n" "DATASET" "$(DATASET)"
 	@printf "  %-20s %s\n" "ANSWERED_QUESTIONS" "$(ANSWERED_QUESTIONS)"
-	@printf "  %-20s %s\n" "SEARCH_DIR" "$(SEARCH_DIR)"
+	@printf "  %-20s %s\n" "SEARCH_SAVE_DIR" "$(SEARCH_SAVE_DIR)"
 	@printf "  %-20s %s\n" "SEARCH_RESULTS" "$(SEARCH_RESULTS)"
-	@printf "  %-20s %s\n\n" "ANSWER_DIR" "$(ANSWER_DIR)"
+	@printf "  %-20s %s\n\n" "ANSWER_SAVE_DIR" "$(ANSWER_SAVE_DIR)"
 
 debug:
 	uv run python -m pdb -m src
