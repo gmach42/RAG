@@ -296,6 +296,8 @@ Error: Query must not be empty
 - LLM generation tutorial: https://huggingface.co/docs/transformers/llm_tutorial
 - Nested list comprehensions: https://www.geeksforgeeks.org/python/nested-list-comprehensions-in-python/
 - printf command in Linux / bash for Makefile formatting: https://linuxcapable.com/printf-command-in-linux/
+- Makefile MAKECMDGOALS: https://www.gnu.org/software/make/manual/html_node/Goals.html
+- Makefile error message: https://www.gnu.org/software/make/manual/html_node/Make-Control-Functions.html
 
 ## AI usage
 
