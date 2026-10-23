@@ -115,6 +115,11 @@ def save_answers(answer_results: StudentSearchResultsAndAnswer,
 def answer_dataset(student_search_results_path: str,
                    save_directory: str) -> Path:
     """Answer every question of a search results file and save them."""
+    input_path = Path(student_search_results_path)
+    if (Path(save_directory) / input_path.name).resolve() == \
+            input_path.resolve():
+        raise ValueError("save_directory would overwrite the search results "
+                         f"{student_search_results_path!r}.")
     results = load_search_results(student_search_results_path)
     generator = Generator()
     answers = answer_questions(generator, results)
