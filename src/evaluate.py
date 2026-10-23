@@ -18,7 +18,11 @@ def load_answered(dataset_path: str) -> list[AnsweredQuestion]:
 
 
 def source_found(expected: MinimalSource, retrieved: MinimalSource) -> bool:
-    """Return True if retrieved overlaps expected with IoU==0.05"""
+    """Return True if retrieved overlaps expected with an IoU >= 0.05.
+
+    Same rule as the moulinette: the intersection of both ranges must be
+    at least 5 % of their union.
+    """
     if (expected.file_path == retrieved.file_path
             and expected.first_character_index < retrieved.last_character_index
             and expected.last_character_index

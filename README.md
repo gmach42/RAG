@@ -39,13 +39,45 @@ Every command is run as `uv run python -m src <command> [options]`:
 | `answer_dataset --student_search_results_path <file> --save_directory <dir>` | Answer a whole search results file, write a `StudentSearchResultsAndAnswer` JSON |
 | `evaluate --student_search_results_path <file> --dataset_path <file>` | Print our own recall@1/3/5/10 against an `AnsweredQuestions` dataset |
 
-The **Makefile** wraps them: `make index`, `make search QUERY="..."`,
-`make search-dataset`, `make evaluate`, `make answer-dataset`, `make run`
-(the whole pipeline) and `make lint` (flake8 + mypy). Paths and `K` can be
-overridden, e.g. `make search-dataset K=5 DATASET=<file>`.
+Optional arguments:
 
-Wrong inputs (empty query, `k=0`, missing or malformed file, missing index…)
-print a one-line `Error: ...` and exit with code 1, never a traceback.
+- `--k` defaults to 10 and `--max_chunk_size` to 2000 (the maximum allowed).
+- `--save_directory` defaults to `data/output/search_results/<scope>/`
+  (`search_dataset`) or `data/output/search_results_and_answer/<scope>/`
+  (`answer_dataset`), where `<scope>` is the name of the folder of the input
+  file (e.g. `UnansweredQuestions`). The output file keeps the name of the
+  input file. Saving over the input file itself is refused.
+- `--raw_dir` (`index`, default `data/raw/`) and `--index_dir` (`index`,
+  `search`, `search_dataset`, `answer`, default `data/processed/`) move the
+  corpus and the index.
+
+Quote the query: Fire would read `search lora adapters` as the query
+`lora` followed by `adapters` as the next argument (`k` or `index_dir`).
+
+The **Makefile** wraps them:
+
+| Target | What it does |
+|---|---|
+| `make install` | `uv sync` |
+| `make index` | Build the index |
+| `make search` / `make answer` | One query, e.g. `make answer QUERY="..." K=5` |
+| `make search-dataset` | Search `UNANSWERED_DATASET`, save in `SEARCH_SAVE_DIR` |
+| `make evaluate` | Our recall of `SEARCH_RESULTS_PATH` against `EVALUATE_DATASET` |
+| `make answer-dataset` | Answer `SEARCH_RESULTS_PATH`, save in `ANSWER_SAVE_DIR` |
+| `make run` | `params` + the whole pipeline: index → search → evaluate → answer |
+| `make params` | Print the current value of every parameter |
+| `make lint` / `make lint-strict` | flake8 + mypy (subject flags / `--strict`) |
+| `make clean` | Remove `__pycache__` and `.mypy_cache` |
+| `make debug` | Run the CLI under `pdb` |
+
+Every parameter can be overridden on the command line, e.g.
+`make search-dataset K=5 UNANSWERED_DATASET=data/datasets/UnansweredQuestions/dataset_code_public.json`.
+An unknown target stops with the list of the valid ones.
+
+Wrong inputs (empty query, `k=0`, missing or malformed file, missing or
+inconsistent index…) print an `Error: ...` message and exit with code 1,
+never a traceback. A query with no word in common with the corpus returns
+no source.
 
 # System architecture
 
@@ -66,6 +98,9 @@ print a one-line `Error: ...` and exit with code 1, never a traceback.
 Every chunk is a `MinimalSource` whose text is exactly
 `file[first_character_index:last_character_index]` (checked by a pydantic
 validator), so a result always points to a real place in the corpus.
+Files are read with `newline=""`: by default Python turns `\r\n` into `\n`,
+which would shift the indices of the 4 corpus files written with Windows
+line endings.
 
 **Markdown / text (`.md`, `.txt`): by sections.**
 1. Cut before each title line (`#`, `##`, ...), ignoring the `#` inside
@@ -142,10 +177,11 @@ both datasets: it was not kept.
 search about 0.1 s, and an answer about 2 s on GPU (about 25 s on
 CPU, mostly spent reading the 5000-token context).
 
-Our `evaluate` command counts a source as found as soon as a chunk overlaps
-it, while the moulinette is a bit stricter (it seems to require an overlap of
-about 5 % of the union of both ranges), so `evaluate` reports slightly higher
-numbers (89 % vs 87 % recall@5 on docs).
+Our `evaluate` command counts an expected source as found when a retrieved
+chunk of the same file overlaps it with an IoU ≥ 0.05 (intersection of both
+ranges ≥ 5 % of their union). A simple overlap first gave higher numbers than
+the moulinette (89 % vs 87 % recall@5 on docs); with this threshold
+`evaluate` gives exactly the moulinette results on both public datasets.
 
 # Design decisions
 
@@ -200,12 +236,10 @@ $ make run
 Parameters
   MAX_CHUNK_SIZE       2000
   K                    10
-  SCOPE                UnansweredQuestions
-  DATASET_FILE         dataset_docs_public.json
-  DATASET              data/datasets/UnansweredQuestions/dataset_docs_public.json
-  ANSWERED_QUESTIONS   data/datasets/AnsweredQuestions/dataset_docs_public.json
+  UNANSWERED_DATASET   data/datasets/UnansweredQuestions/dataset_docs_public.json
+  EVALUATE_DATASET     data/datasets/AnsweredQuestions/dataset_docs_public.json
   SEARCH_SAVE_DIR      data/output/search_results/UnansweredQuestions
-  SEARCH_RESULTS       data/output/search_results/UnansweredQuestions/dataset_docs_public.json
+  SEARCH_RESULTS_PATH  data/output/search_results/UnansweredQuestions/dataset_docs_public.json
   ANSWER_SAVE_DIR      data/output/search_results_and_answer/UnansweredQuestions
 
 === INDEXATION ===
@@ -221,9 +255,9 @@ Evaluation Results:
 ===================
 Questions evaluated: 100
 Recall@1: 0.61 (61.0%)
-Recall@3: 0.83 (83.0%)
-Recall@5: 0.89 (89.0%)
-Recall@10: 0.92 (92.0%)
+Recall@3: 0.82 (82.0%)
+Recall@5: 0.87 (87.0%)
+Recall@10: 0.90 (90.0%)
 
 === ANSWER_DATASET ===
 Answering: 100%|██████████| 100/100 [03:02<00:00, 1.83s/it]
