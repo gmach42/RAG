@@ -18,11 +18,21 @@ def load_answered(dataset_path: str) -> list[AnsweredQuestion]:
 
 
 def source_found(expected: MinimalSource, retrieved: MinimalSource) -> bool:
-    """Return True if retrieved overlaps expected in the same file."""
-    return (expected.file_path == retrieved.file_path
+    """Return True if retrieved overlaps expected with IoU==0.05"""
+    if (expected.file_path == retrieved.file_path
             and expected.first_character_index < retrieved.last_character_index
             and expected.last_character_index
-            > retrieved.first_character_index)
+            > retrieved.first_character_index):
+        inter: int = (min(expected.last_character_index,
+                          retrieved.last_character_index) -
+                      max(expected.first_character_index,
+                          retrieved.first_character_index))
+        union: int = (max(expected.last_character_index,
+                          retrieved.last_character_index) -
+                      min(expected.first_character_index,
+                          retrieved.first_character_index))
+        return inter / union >= 0.05
+    return False
 
 
 def recall_at_k(expected: list[MinimalSource], retrieved: list[MinimalSource],
@@ -43,13 +53,10 @@ def recall_at_k(expected: list[MinimalSource], retrieved: list[MinimalSource],
 
 def evaluate(dataset_path: str,
              student_search_results_path: str) -> tuple[dict[int, float], int]:
-    """Return the mean recall@k for each k, and the number of questions."""
-    # For each question, compute the proportion of expected sources found
-    # in the top-k results, then average over all questions for each k.
+    """Return the average recall@k for each k, and the number of questions."""
     results: StudentSearchResults = load_search_results(
         student_search_results_path)
     answered: list[AnsweredQuestion] = load_answered(dataset_path)
-    # Index the sources found for each question by its id
     results_by_id = {
         r.question_id: r.retrieved_sources
         for r in results.search_results

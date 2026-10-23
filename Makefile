@@ -70,8 +70,6 @@ params:
 	@printf "$(BOLD)Parameters$(RESET)\n"
 	@printf "  %-20s %s\n" "MAX_CHUNK_SIZE" "$(MAX_CHUNK_SIZE)"
 	@printf "  %-20s %s\n" "K" "$(K)"
-	@printf "  %-20s %s\n" "DATASET_SCOPE" "$(DATASET_SCOPE)"
-	@printf "  %-20s %s\n" "DATASET_FILE" "$(DATASET_FILE)"
 	@printf "  %-20s %s\n" "UNANSWERED_DATASET" "$(UNANSWERED_DATASET)"
 	@printf "  %-20s %s\n" "EVALUATE_DATASET" "$(EVALUATE_DATASET)"
 	@printf "  %-20s %s\n" "SEARCH_SAVE_DIR" "$(SEARCH_SAVE_DIR)"

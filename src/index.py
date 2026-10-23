@@ -196,8 +196,7 @@ def save_index(retriever: bm25s.BM25, chunks: list[MinimalSource],
     out = Path(index_dir)
     out.mkdir(parents=True, exist_ok=True)
     retriever.save(str(out))
-    data = [chunk.model_dump() for chunk in chunks]  # get a list of dict
-    # pathlib write_text replaces open("w") + json.dump
+    data = [chunk.model_dump() for chunk in chunks]
     (out / CHUNKS_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
 
@@ -207,6 +206,7 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
     The i-th document of the BM25 index is chunks[i].
     """
     required = (BM25_PARAMS_FILENAME, CHUNKS_FILENAME)
+    # Check for BM25
     if not all((Path(index_dir) / name).is_file() for name in required):
         raise FileNotFoundError(
             f"No index in {index_dir!r}, run the index command first.")
