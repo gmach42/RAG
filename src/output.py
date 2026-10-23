@@ -95,6 +95,7 @@ class CLI:
         """Print the top_k sources for a single query."""
         q = self._check_query(query)
         top_k = self._check_k(k)
+        index_dir = self._check_path(index_dir, "index_dir")
         self._print_centered("=== SEARCH ===\n\n", YELLOW + BOLD)
         retriever = Retriever(index_dir)
         sources = retriever.search(q, top_k)
@@ -133,6 +134,7 @@ class CLI:
         """Print the answer for a single query."""
         q = self._check_query(query)
         top_k = self._check_k(k)
+        index_dir = self._check_path(index_dir, "index_dir")
         self._print_centered("=== ANSWER ===\n\n", GREEN + BOLD)
         retriever = Retriever(index_dir)
         srcs = retriever.search(q, top_k)
