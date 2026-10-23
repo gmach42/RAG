@@ -24,9 +24,13 @@ def list_corpus_files(raw_dir: str) -> list[Path]:
 
 
 def read_file(path: Path) -> str | None:
-    """Read a file, return None if not readable (e.g. binary)."""
+    """Read a file, return None if not readable (e.g. binary).
+
+    newline="" keeps the Windows (CRLF) line endings, so that the character
+    indices of the chunks match the file on disk.
+    """
     try:
-        return path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8", newline="")
     except (UnicodeDecodeError, OSError):
         return None
 
@@ -161,7 +165,7 @@ def tokenize(texts: list[str],
 def build_index(raw_dir: str,
                 index_dir: str,
                 max_chunk_size: int = DEFAULT_MAX_CHUNK_SIZE) -> int:
-    """Main function to build the BM25 index from raw text files.
+    """Build the BM25 index from the raw text files, return the chunk count.
 
     Stages:
     1. Chunk raw text files into sections.
@@ -221,4 +225,7 @@ def load_index(index_dir: str) -> tuple[bm25s.BM25, list[MinimalSource]]:
     except (OSError, ValueError, KeyError, TypeError) as e:
         raise ValueError(f"Index in {index_dir!r} is corrupted, "
                          f"run the index command again ({e})") from e
+    if len(chunks) != retriever.scores.get("num_docs"):
+        raise ValueError(f"Index in {index_dir!r} does not match "
+                         f"{CHUNKS_FILENAME}, run the index command again.")
     return retriever, chunks
