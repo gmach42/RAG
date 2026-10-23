@@ -84,6 +84,11 @@ def search_dataset(index_dir: str, dataset_path: str, top_k: int,
     """
     if top_k <= 0:
         raise ValueError(f"k must be a positive integer, got {top_k}.")
+    input_path = Path(dataset_path)
+    if (Path(save_directory) / input_path.name).resolve() == \
+            input_path.resolve():
+        raise ValueError(
+            f"save_directory would overwrite the dataset {dataset_path!r}.")
     questions = load_questions(dataset_path)
     retriever = Retriever(index_dir)
     results = search_questions(retriever, questions, top_k)
