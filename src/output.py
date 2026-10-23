@@ -12,6 +12,7 @@ DEFAULT_INDEX_DIR: str = "data/processed/"
 DEFAULT_SEARCH_SAVE_DIRECTORY: str = "data/output/search_results/"
 DEFAULT_ANSWER_SAVE_DIRECTORY: str = "data/output/search_results_and_answer/"
 DEFAULT_MAX_CHUNK_SIZE: int = 2000
+MIN_CHUNK_SIZE: int = 100
 DEFAULT_K: int = 10
 
 # Colors / Font in terminal
@@ -34,14 +35,16 @@ class CLI:
         return k
 
     @staticmethod
-    def _check_max_chunk_size(value: object, maximum: int = 2000) -> int:
-        """Check that max_chunk_size is a positive integer <= maximum."""
+    def _check_max_chunk_size(value: object,
+                              minimum: int = MIN_CHUNK_SIZE,
+                              maximum: int = 2000) -> int:
+        """Check that max_chunk_size is an integer in [minimum, maximum]."""
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise ValueError(
                 f"max_chunk_size must be a positive integer, got {value!r}")
-        if value > maximum:
-            raise ValueError(
-                f"max_chunk_size must be <= {maximum}, got {value}")
+        if not minimum <= value <= maximum:
+            raise ValueError(f"max_chunk_size must be between {minimum} "
+                             f"and {maximum}, got {value}")
         return value
 
     @staticmethod
@@ -100,7 +103,7 @@ class CLI:
         retriever = Retriever(index_dir)
         sources = retriever.search(q, top_k)
         if not sources:
-            print("No source found for this query.")
+            raise ValueError("No source found for this query")
         for source in sources:
             src = source.model_dump(mode="json", exclude={"text"})
             print(
@@ -138,6 +141,8 @@ class CLI:
         self._print_centered("=== ANSWER ===\n\n", GREEN + BOLD)
         retriever = Retriever(index_dir)
         srcs = retriever.search(q, top_k)
+        if not srcs:
+            raise ValueError("No source found for this query")
         generator = Generator()
         print(f"{GREEN}\nThe answer for the query '{q}' is: "
               f"\n{generator.answer(q, srcs)}\n{RESET}")

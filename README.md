@@ -41,7 +41,10 @@ Every command is run as `uv run python -m src <command> [options]`:
 
 Optional arguments:
 
-- `--k` defaults to 10 and `--max_chunk_size` to 2000 (the maximum allowed).
+- `--k` defaults to 10. `--max_chunk_size` defaults to 2000, the maximum
+  allowed, and must be at least 100: smaller chunks carry almost no
+  context, and a size of 1 would create ~20 million chunks (the corpus is
+  ~20 million characters).
 - `--save_directory` defaults to `data/output/search_results/<scope>/`
   (`search_dataset`) or `data/output/search_results_and_answer/<scope>/`
   (`answer_dataset`), where `<scope>` is the name of the folder of the input
@@ -74,10 +77,12 @@ Every parameter can be overridden on the command line, e.g.
 `make search-dataset K=5 UNANSWERED_DATASET=data/datasets/UnansweredQuestions/dataset_code_public.json`.
 An unknown target stops with the list of the valid ones.
 
-Wrong inputs (empty query, `k=0`, missing or malformed file, missing or
-inconsistent index…) print an `Error: ...` message and exit with code 1,
-never a traceback. A query with no word in common with the corpus returns
-no source.
+Wrong inputs (empty query, `k=0`, `max_chunk_size` out of range, missing or
+malformed file, missing or inconsistent index…) print an `Error: ...`
+message and exit with code 1, never a traceback. So does a `search` or
+`answer` query with no word in common with the corpus (`No source found
+for this query`); in `search_dataset`, such a question just gets an empty
+`retrieved_sources` list, so that the other questions are still processed.
 
 # System architecture
 
@@ -134,7 +139,8 @@ English stopwords.
   even when these words are not in the chunk itself. Only the indexed text
   changes: the stored chunks and the context given to Qwen stay the same.
 - Chunks with a null score (no word in common with the query) are dropped,
-  so a nonsensical query returns no source instead of random ones.
+  so a nonsensical query returns no source instead of random ones (and
+  `answer` stops with an error instead of loading Qwen for nothing).
 - The index is saved once (`bm25s` files + `chunks.json`, where the i-th
   chunk is the i-th BM25 document) and reloaded by every search:
 
@@ -305,6 +311,9 @@ I don't know based on the vLLM sources.
 
 $ uv run python -m src search ""
 Error: Query must not be empty
+
+$ uv run python -m src search "zzqxj blorf"
+Error: No source found for this query
 ```
 
 # Resources
