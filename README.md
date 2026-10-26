@@ -39,24 +39,6 @@ Every command is run as `uv run python -m src <command> [options]`:
 | `answer_dataset --student_search_results_path <file> --save_directory <dir>` | Answer a whole search results file, write a `StudentSearchResultsAndAnswer` JSON |
 | `evaluate --student_search_results_path <file> --dataset_path <file>` | Print our own recall@1/3/5/10 against an `AnsweredQuestions` dataset |
 
-Optional arguments:
-
-- `--k` defaults to 10. `--max_chunk_size` defaults to 2000, the maximum
-  allowed, and must be at least 100: smaller chunks carry almost no
-  context, and a size of 1 would create ~20 million chunks (the corpus is
-  ~20 million characters).
-- `--save_directory` defaults to `data/output/search_results/<scope>/`
-  (`search_dataset`) or `data/output/search_results_and_answer/<scope>/`
-  (`answer_dataset`), where `<scope>` is the name of the folder of the input
-  file (e.g. `UnansweredQuestions`). The output file keeps the name of the
-  input file. Saving over the input file itself is refused.
-- `--raw_dir` (`index`, default `data/raw/`) and `--index_dir` (`index`,
-  `search`, `search_dataset`, `answer`, default `data/processed/`) move the
-  corpus and the index.
-
-Quote the query: Fire would read `search lora adapters` as the query
-`lora` followed by `adapters` as the next argument (`k` or `index_dir`).
-
 The **Makefile** wraps them:
 
 | Target | What it does |
@@ -77,13 +59,6 @@ Every parameter can be overridden on the command line, e.g.
 `make search-dataset K=5 UNANSWERED_DATASET=data/datasets/UnansweredQuestions/dataset_code_public.json`.
 An unknown target stops with the list of the valid ones.
 
-Wrong inputs (empty query, `k=0`, `max_chunk_size` out of range, missing or
-malformed file, missing or inconsistent index…) print an `Error: ...`
-message and exit with code 1, never a traceback. So does a `search` or
-`answer` query with no word in common with the corpus (`No source found
-for this query`); in `search_dataset`, such a question just gets an empty
-`retrieved_sources` list, so that the other questions are still processed.
-
 # System architecture
 
 ![RAG schema](RAG_schema.png)
@@ -94,7 +69,7 @@ for this query`); in `search_dataset`, such a question just gets an empty
 | `index.py` | Read the corpus, chunk it, build / save / load the BM25 index |
 | `retrieval.py` | `Retriever` (index loaded once) and `search_dataset` |
 | `answer_gen.py` | `Generator` (Qwen loaded once) and `answer_dataset` |
-| `evaluate.py` | recall@k against a ground-truth dataset |
+| `evaluate.py` | recall@k against a verified dataset |
 | `output.py` | CLI: argument checks, calls, printing |
 | `__main__.py` | Fire entry point, turns every error into a clean message |
 
@@ -103,9 +78,6 @@ for this query`); in `search_dataset`, such a question just gets an empty
 Every chunk is a `MinimalSource` whose text is exactly
 `file[first_character_index:last_character_index]` (checked by a pydantic
 validator), so a result always points to a real place in the corpus.
-Files are read with `newline=""`: by default Python turns `\r\n` into `\n`,
-which would shift the indices of the 4 corpus files written with Windows
-line endings.
 
 **Markdown / text (`.md`, `.txt`): by sections.**
 1. Cut before each title line (`#`, `##`, ...), ignoring the `#` inside
@@ -165,20 +137,6 @@ Results of the moulinette on the public datasets (`k=10`):
 | docs (100 questions) | 61.0 % | 82.0 % | **87.0 %** | 90.0 % | 80 % ✅ |
 | code (99 questions) | 45.5 % | 64.6 % | **69.7 %** | 75.8 % | 50 % ✅ |
 
-What each idea brought (recall@5, same corpus and datasets):
-
-| Variant | docs | code |
-|---|---|---|
-| Sections for `.md`, fixed windows for `.py` | 85.0 % | 59.6 % |
-| **+ file path words (kept)** | **87.0 %** | **69.7 %** |
-| `.py` cut along `def` / `class` instead | 85.0 % | 55.6 % |
-| First line + English stemmer | +1 pt | +0 pt |
-| + splitting `snake_case` identifiers into words | 81.0 % | 80.8 % |
-
-Splitting identifiers is the best idea for code questions, but it brings the
-docs recall down to 81 %, too close to the threshold, with a single index for
-both datasets: it was not kept.
-
 **Speed:** indexing the whole corpus (11,157 chunks) takes about 3 s, a
 search about 0.1 s, and an answer about 2 s on GPU (about 25 s on
 CPU, mostly spent reading the 5000-token context).
@@ -198,37 +156,31 @@ the moulinette (89 % vs 87 % recall@5 on docs); with this threshold
 - **Load once, use many times.** `Retriever` keeps the index and `Generator`
   keeps Qwen in memory, so `search_dataset` and `answer_dataset` load them a
   single time for 100 questions.
-- **`transformers` for generation.** The reviewer only runs `uv sync`, so the
-  model has to come from a pip-installable library (no external server such
-  as Ollama).
+- **`transformers` for generation.** Decided to use the `transformers` library instead of other heavier frameworks like `Ollama` because it is lightweight and the project does not justifies the use of something heavier.
 - **`MinimalSource` carries the chunk text.** The subject allows extra
   fields; keeping the text avoids re-reading the files at search and answer
   time. It is optional, since the reference datasets have no text.
 - **One error handler.** Functions raise exceptions with a clear message and
   `__main__.py` prints them, so no traceback ever reaches the user.
 - **Naming:** `*_path` is a file, `*_dir` a directory (except
-  `save_directory`, imposed by the subject).
+  `save_directory`, imposed by the subject). To avoid confusion, most of the variable names are the same as the CLI arguments.
 
 # Challenges faced
 
-- **Understanding the data models.** The subject only says that
-  `AnsweredQuestion` "represents an answered question". Its real role is to
-  be the ground truth: its `sources` are what the retriever should find, and
-  `evaluate` compares our `MinimalSearchResults` against it. Drawing the
-  pipeline (schema above) made the role of each model clear.
-- **Nested models.** Results contain questions, which contain lists of
-  sources: list comprehensions were the natural tool, but also the source of
-  a few headaches (e.g. building a list of lists instead of a list).
+- **Chunking.** The challenge from chunking came from obviously finding an efficient strategy, but also from finding how the moulinette was doing it. Indeed, after multiple tests, it became evident that for python files especially, making a basic chunking strategy yielded better results than trying a more complex one. As for markdown files, it turns out that Qwen does not like short chunks (as it gives a lot of importance) so the strategy was to merge small chunks into bigger ones, while still respecting the maximum chunk size.
+- **Models / Subject comprehension.** From the start up, a lot of time was spent understanding and planning the project. To be honest the models presentation was a bit confusing and since each models where nested in one another it was a bit hard to understand the flow of the project. For example the description for UnsanweredQuestion and AnweredQuestion was: "The UnansweredQuestion and AnsweredQuestion models represent an unanswered question and an answered question:". Yeah no shit Sherlock.
 - **transformers warnings.** The text-generation pipeline copies a legacy
   `max_length=20` that conflicts with `max_new_tokens`, and merges its config
   with Qwen's own sampling parameters. The fix was to start from Qwen's
   config, set it once, and give that single config to the pipeline.
-- **Keeping Qwen inside the sources.** The model happily gave a chocolate cake
-  recipe, because BM25 always returns *some* chunks. Placing the rules right
-  after the sources and asking for an exact refusal sentence fixed it.
+- **Keeping Qwen inside the sources.** Had a lot of trouble with Qwen answering questions that were not in the sources. Even when Qwen was finding that understanding that the answer was not in the sources it would still try to answer the question. The solution was to check if the answer contained the refusal sentence and if it did, then only keep that sentence as the answer.
 - **Errors that hide the real cause.** An empty `data/processed/` folder made
   `bm25s` fail with a raw `[Errno 2]`; `load_index` now checks the index
   files themselves and says to run `index` first.
+- **Managing overwritting / pathing.** The subject allows saving the search results over the input dataset,
+  which would make `evaluate` fail. The CLI now refuses to overwrite the
+  input file, and `search_dataset` / `answer_dataset` create the output
+  directory if it does not exist.
 
 # Example usage
 
@@ -346,10 +298,11 @@ Error: No source found for this query
 
 Claude (Anthropic) was used throughout the project as an assistant:
 
-- explaining the documentation of `transformers` and `bm25s`, and the tools
-  of the project;
+- explaining the documentation of `transformers` and `bm25s`, the tools and the libraries used in the project;
 - debugging `transformers` warnings and errors that did not come from the
   project itself (the `max_length` / `max_new_tokens` conflict, sampling
   parameters, tokenizer clean-up);
-- final review: subject compliance, edge cases, flake8 / mypy, docstrings,
-  and the writing of this README from my notes.
+- help with Qwen constraining the answer to the sources and refusing when it does not know;
+- writing of the long docstrings in data_models.py;
+- writing of the `README.md` from my notes.
+

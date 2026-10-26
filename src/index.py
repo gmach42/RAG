@@ -24,11 +24,7 @@ def list_corpus_files(raw_dir: str) -> list[Path]:
 
 
 def read_file(path: Path) -> str | None:
-    """Read a file, return None if not readable (e.g. binary).
-
-    newline="" keeps the Windows (CRLF) line endings, so that the character
-    indices of the chunks match the file on disk.
-    """
+    """Read a file, return None if not readable (e.g. binary)."""
     try:
         return path.read_text(encoding="utf-8", newline="")
     except (UnicodeDecodeError, OSError):
